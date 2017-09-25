@@ -169,10 +169,6 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	//log.Println("block:")
 	//spew.Dump(block)
 
-	// TEST
-	log.Printf("+%v", share)
-	log.Printf("+%v", block)
-
 	if !hasher.Verify(share) {
 		return false, false
 	}

@@ -163,8 +163,8 @@ func (r *RedisClient) checkPoWExist(height uint64, params []string) (bool, error
 	// Sweep PoW backlog for previous blocks, we have 3 templates back in RAM
 	r.client.ZRemRangeByScore(r.formatKey("pow"), "-inf", fmt.Sprint("(", height-8))
 	
-	// TEST
-	fmt.Println(strings.Join(params, ":"))
+	// DEBUG
+	//fmt.Println(strings.Join(params, ":"))
 
 	val, err := r.client.ZAdd(r.formatKey("pow"), redis.Z{Score: float64(height), Member: strings.Join(params, ":")}).Result()
 	return val == 0, err
