@@ -22,7 +22,6 @@ var hasher = ethash.New()
 // params[1] = hashNoNonce
 // params[2] = mixDigest
 
-
 //// NiceHash share processing
 func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, params[]string) (bool, bool) { // (exist, validShare)
 	nonceHex := params[0]
@@ -31,31 +30,21 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 
 	// Block "difficulty" is BigInt
 	// NiceHash "difficulty" is float64 ...
-	// how to convert?
-	// ! see temptest.go
 	// diffFloat => target; then: diffInt = 2^256 / target
 
 	shareDiffFloat, mixDigest := hasher.GetShareDiff(t.Height, hashNoNonce, nonce)
-	//shareDiffFloat, mixDigest := hasher.GetShareDiff(t.Height, hashNoNonce, nonce)
 	
-	// temp hack ???
+	// temporary 
 	if shareDiffFloat < 0.0001 {
 		log.Printf("share difficulty too low, %f < %d, from %v@%v", shareDiffFloat, t.Difficulty, login, ip)
 		return false, false
 	}
-	// FIX ME, we have a rounding error somewhere, causing slightly too large shares
-	// super dirty workaround for testing:
+	// temporary hack, ignore round errors
 	shareDiffFloat = shareDiffFloat * 0.98
 
 	shareDiff_big := util.DiffFloatToDiffInt(shareDiffFloat)
-	// fixme, in theory this is casting uint256 to uint64
-	// in practice, it should fit easily
 	shareDiff := shareDiff_big.Int64()
 
-	// DEBUG
-	//log.Printf("login=%s id=%s ip=%s ... shareDiff = %d", login, id, ip, shareDiff)
-	
-	// ? seems to be correct
 	submit_params := []string{
 		nonceHex,
 		hashNoNonce.Hex(),
@@ -84,14 +73,6 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 		mixDigest:   common.HexToHash(mixDigest.Hex()),
 	}
 	
-	// DEBUG
-	//log.Println("params:")
-	//spew.Dump(params)
-	//log.Println("share:")
-	//spew.Dump(share)
-	//log.Println("block:")
-	//spew.Dump(block)
-
 	if !hasher.Verify(share) {
 		log.Println("!hasher.Verify(share)")
 		return false, false
@@ -99,7 +80,6 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 
 	if hasher.Verify(block) {
 		ok, err := s.rpc().SubmitBlock(submit_params)
-		//ok, err := s.rpc().SubmitBlock(params)
 		if err != nil {
 			log.Printf("Block submission failure at height %v for %v: %v", h.height, t.Header, err)
 		} else if !ok {
@@ -161,14 +141,6 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 		mixDigest:   common.HexToHash(mixDigest),
 	}
 	
-	// DEBUG
-	//log.Println("params:")
-	//spew.Dump(params)
-	//log.Println("share:")
-	//spew.Dump(share)
-	//log.Println("block:")
-	//spew.Dump(block)
-
 	if !hasher.Verify(share) {
 		return false, false
 	}
