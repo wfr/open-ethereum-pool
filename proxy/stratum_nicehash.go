@@ -387,8 +387,8 @@ func (s *ProxyServer) broadcastNewJobsNH() {
 					//  if false, the stale rate might be higher because miners take too long to switch jobs
 					//
 					//  It's undetermined what's more cost-effective
-					// true,
-					false,
+					true,
+					//false,
 				},
 			}
 
