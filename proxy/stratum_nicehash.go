@@ -282,7 +282,7 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		id := splitData[1]
 
 		if cs.JobDetails.JobID != params[1] {
-			log.Printf("mining.submit: wrong JobID. Received: %s != %s", params[1], cs.JobDetails.JobID)
+			log.Printf("Stale share (mining.submit JobID received %s != current %s)", params[1], cs.JobDetails.JobID)
 			return cs.sendTCPNHError(req.Id, []string{
 				"21",
 				"Stale share.",
@@ -379,7 +379,16 @@ func (s *ProxyServer) broadcastNewJobsNH() {
 					cs.JobDetails.JobID,
 					cs.JobDetails.SeedHash,
 					cs.JobDetails.HeaderHash,
-					true,
+					//  If set to true, then miner needs to clear queue of jobs and immediatelly
+					//  start working on new provided job, because all old jobs shares will
+					//  result with stale share error.
+					//
+					//  if true, NiceHash charges "Extra Rewards" for frequent job changes
+					//  if false, the stale rate might be higher because miners take too long to switch jobs
+					//
+					//  It's undetermined what's more cost-effective
+					// true,
+					false,
 				},
 			}
 
