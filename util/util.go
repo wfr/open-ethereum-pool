@@ -79,3 +79,26 @@ func String2Big(num string) *big.Int {
 	n.SetString(num, 0)
 	return n
 }
+
+// for NiceHash...
+// fixme: rounding error causes invalid shares
+func DiffToTarget(diff float64) (target *big.Int) {
+    mantissa := 0x0000ffff / diff
+    exp := 1
+    tmp := mantissa
+    for tmp >= 256.0 {
+        tmp /= 256.0
+        exp++
+    }
+    for i := 0; i < exp; i++ {
+        mantissa *= 256.0
+    }
+    target = new(big.Int).Lsh(big.NewInt(int64(mantissa)), uint(26-exp)*8)
+    return
+}
+
+func DiffFloatToDiffInt(diffFloat float64) (diffInt *big.Int) {
+    target := DiffToTarget(diffFloat)
+    return new(big.Int).Div(pow256, target)
+}
+

@@ -17,14 +17,17 @@ var workerPattern = regexp.MustCompile("^[0-9a-zA-Z-_]{1,8}$")
 // Stratum
 func (s *ProxyServer) handleLoginRPC(cs *Session, params []string, id string) (bool, *ErrorReply) {
 	if len(params) == 0 {
+		log.Println("handleLoginRPC: Invalid params")
 		return false, &ErrorReply{Code: -1, Message: "Invalid params"}
 	}
 
 	login := strings.ToLower(params[0])
 	if !util.IsValidHexAddress(login) {
+		log.Println("handleLoginRPC: Invalid login")
 		return false, &ErrorReply{Code: -1, Message: "Invalid login"}
 	}
 	if !s.policy.ApplyLoginPolicy(login, cs.ip) {
+		log.Println("handleLoginRPC: You are blacklisted")
 		return false, &ErrorReply{Code: -1, Message: "You are blacklisted"}
 	}
 	cs.login = login
@@ -63,18 +66,48 @@ func (s *ProxyServer) handleSubmitRPC(cs *Session, login, id string, params []st
 		return false, &ErrorReply{Code: -1, Message: "Invalid params"}
 	}
 
+	// TEST: PREPEND 0x for NiceHash submissions
+	for i := 0; i <= 2; i++ {
+		if params[i][0:2] != "0x" {
+			params[i] = "0x" + params[i]
+		}
+		//log.Printf("handleSubmitRPC, params[%d] = %s", i, params[i])
+	}
+
 	if !noncePattern.MatchString(params[0]) || !hashPattern.MatchString(params[1]) || !hashPattern.MatchString(params[2]) {
 		s.policy.ApplyMalformedPolicy(cs.ip)
 		log.Printf("Malformed PoW result from %s@%s %v", login, cs.ip, params)
+
+		// TEST
+		if !noncePattern.MatchString(params[0]) {
+			log.Printf("[0] noncePattern %s", params[0])
+		}
+		if !hashPattern.MatchString(params[1]) {
+			log.Printf("[1] hashPattern %s", params[1])
+		}
+		if !hashPattern.MatchString(params[2]) {
+			log.Printf("[2] hashPattern %s", params[2])
+		}
+
 		return false, &ErrorReply{Code: -1, Message: "Malformed PoW result"}
 	}
 	t := s.currentBlockTemplate()
-	exist, validShare := s.processShare(login, id, cs.ip, t, params)
+	
+	/// ORIGINAL
+	//exist, validShare := s.processShare(login, id, cs.ip, t, params)
+	/// NICEHASH
+	exist, validShare := s.processShareNH(login, id, cs.ip, t, params)
+
 	ok := s.policy.ApplySharePolicy(cs.ip, !exist && validShare)
 
 	if exist {
 		log.Printf("Duplicate share from %s@%s %v", login, cs.ip, params)
 		return false, &ErrorReply{Code: 22, Message: "Duplicate share"}
+		// see https://github.com/sammy007/open-ethereum-pool/compare/master...nicehashdev:patch-1
+		if !ok {
+			return false, &ErrorReply{Code: 23, Message: "Invalid share"}
+		}
+		return false, nil
 	}
 
 	if !validShare {

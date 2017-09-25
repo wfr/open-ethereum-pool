@@ -83,6 +83,7 @@ func (s *ProxyServer) handleTCPClient(cs *Session) error {
 		}
 
 		if len(data) > 1 {
+			log.Printf(">>> %s\n", data)
 			var req StratumReq
 			err = json.Unmarshal(data, &req)
 			if err != nil {
@@ -146,6 +147,7 @@ func (cs *Session) sendTCPResult(id *json.RawMessage, result interface{}) error 
 	defer cs.Unlock()
 
 	message := JSONRpcResp{Id: id, Version: "2.0", Error: nil, Result: result}
+	//log.Printf("<<< %s", message)
 	return cs.enc.Encode(&message)
 }
 
@@ -154,6 +156,7 @@ func (cs *Session) pushNewJob(result interface{}) error {
 	defer cs.Unlock()
 	// FIXME: Temporarily add ID for Claymore compliance
 	message := JSONPushMessage{Version: "2.0", Result: result, Id: 0}
+	//log.Printf("<<< %s", message)
 	return cs.enc.Encode(&message)
 }
 
@@ -162,6 +165,7 @@ func (cs *Session) sendTCPError(id *json.RawMessage, reply *ErrorReply) error {
 	defer cs.Unlock()
 
 	message := JSONRpcResp{Id: id, Version: "2.0", Error: reply}
+	//log.Printf("<<< %s", message)
 	err := cs.enc.Encode(&message)
 	if err != nil {
 		return err
