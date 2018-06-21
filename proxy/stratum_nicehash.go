@@ -116,7 +116,7 @@ func randomHex(strlen int) string {
 	return string(result)
 }
 
-func (cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) JSONRpcRespNH {
+func (cs *Session) getNotificationResponse(s *ProxyServer, id json.RawMessage) JSONRpcRespNH {
 	result := make([]interface{}, 2)
 	param1 := make([]string, 3)
 	param1[0] = "mining.notify"
@@ -135,7 +135,7 @@ func (cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) 
 	return resp
 }
 
-func (cs *Session) sendTCPNHError(id *json.RawMessage, message interface{}) error {
+func (cs *Session) sendTCPNHError(id json.RawMessage, message interface{}) error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
 
@@ -170,7 +170,7 @@ func (cs *Session) sendTCPNHReq(resp JSONRpcReqNH) error {
 	return cs.enc.Encode(&resp)
 }
 
-func (cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
+func (cs *Session) sendJob(s *ProxyServer, id json.RawMessage) error {
 	reply, errReply := s.handleGetWorkRPC(cs)
 	if errReply != nil {
 		return cs.sendTCPNHError(id, []string{
