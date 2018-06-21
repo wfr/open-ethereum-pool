@@ -7,13 +7,13 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
 	"strconv"
+	"time"
 
-	"github.com/sammy007/open-ethereum-pool/util"
 	"math/rand"
 	"strings"
-	_"github.com/davecgh/go-spew/spew"
+
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 func (s *ProxyServer) ListenNiceHashTCP() {
@@ -116,7 +116,7 @@ func randomHex(strlen int) string {
 	return string(result)
 }
 
-func (cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) JSONRpcRespNH {
+func (cs *Session) getNotificationResponse(s *ProxyServer, id json.RawMessage) JSONRpcRespNH {
 	result := make([]interface{}, 2)
 	param1 := make([]string, 3)
 	param1[0] = "mining.notify"
@@ -126,16 +126,16 @@ func (cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) 
 	result[1] = cs.Extranonce
 
 	resp := JSONRpcRespNH{
-		Id:      id,
+		Id: id,
 		//Version: "EthereumStratum/1.0.0",
-		Result:  result,
-		Error:   nil,
+		Result: result,
+		Error:  nil,
 	}
 
 	return resp
 }
 
-func (cs *Session) sendTCPNHError(id *json.RawMessage, message interface{}) error {
+func (cs *Session) sendTCPNHError(id json.RawMessage, message interface{}) error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
 
@@ -151,7 +151,7 @@ func (cs *Session) sendTCPNHError(id *json.RawMessage, message interface{}) erro
 func (cs *Session) sendTCPNHResult(resp JSONRpcRespNH) error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
-	
+
 	// DEBUG TRAFFIC
 	//foo, _ := json.Marshal(resp)
 	//log.Printf("<<< %s", string(foo))
@@ -162,7 +162,7 @@ func (cs *Session) sendTCPNHResult(resp JSONRpcRespNH) error {
 func (cs *Session) sendTCPNHReq(resp JSONRpcReqNH) error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
-	
+
 	// DEBUG TRAFFIC
 	//foo, _ := json.Marshal(resp)
 	//log.Printf("<<< %s", string(foo))
@@ -170,7 +170,7 @@ func (cs *Session) sendTCPNHReq(resp JSONRpcReqNH) error {
 	return cs.enc.Encode(&resp)
 }
 
-func (cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
+func (cs *Session) sendJob(s *ProxyServer, id json.RawMessage) error {
 	reply, errReply := s.handleGetWorkRPC(cs)
 	if errReply != nil {
 		return cs.sendTCPNHError(id, []string{
@@ -180,7 +180,7 @@ func (cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 	}
 
 	cs.JobDetails = jobDetails{
-		JobID:      randomHex(8),
+		JobID: randomHex(8),
 		//JobID:      cs.JobDetails.JobID, // ??? test
 		SeedHash:   reply[1],
 		HeaderHash: reply[0],
@@ -188,10 +188,10 @@ func (cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 
 	// The NiceHash official .NET pool omits 0x...
 	// TO DO: clean up once everything works
-	if (cs.JobDetails.SeedHash[0:2] == "0x") {
+	if cs.JobDetails.SeedHash[0:2] == "0x" {
 		cs.JobDetails.SeedHash = cs.JobDetails.SeedHash[2:]
 	}
-	if (cs.JobDetails.HeaderHash[0:2] == "0x") {
+	if cs.JobDetails.HeaderHash[0:2] == "0x" {
 		cs.JobDetails.HeaderHash = cs.JobDetails.HeaderHash[2:]
 	}
 
@@ -215,7 +215,7 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 	switch req.Method {
 	case "mining.subscribe":
 		var params []string
-		err := json.Unmarshal(*req.Params, &params)
+		err := json.Unmarshal(req.Params, &params)
 		if err != nil {
 			log.Println("Malformed stratum request params from", cs.ip)
 			return err
@@ -231,7 +231,7 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 
 	case "mining.authorize":
 		var params []string
-		err := json.Unmarshal(*req.Params, &params)
+		err := json.Unmarshal(req.Params, &params)
 		if err != nil {
 			return errors.New("invalid params")
 		}
@@ -264,11 +264,11 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 
 	case "mining.submit":
 		var params []string
-		if err := json.Unmarshal(*req.Params, &params); err != nil {
+		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Println("mining.submit: json.Unmarshal fail")
 			return err
 		}
-	
+
 		// params[0] = Username
 		// params[1] = Job ID
 		// params[2] = Minernonce
@@ -297,13 +297,12 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		}
 
 		// test nicehash
-		if (params[1][0:2] != "0x") {
+		if params[1][0:2] != "0x" {
 			params[1] = "0x" + params[1]
 		}
-		if (params[2][0:2] != "0x") {
+		if params[2][0:2] != "0x" {
 			params[2] = "0x" + params[2]
 		}
-
 
 		reply, errReply := s.handleTCPSubmitRPC(cs, id, params)
 		if errReply != nil {
@@ -316,7 +315,7 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		resp := JSONRpcRespNH{
 			Id:     req.Id,
 			Result: reply,
-			Error: false,
+			Error:  false,
 		}
 
 		// TEST, ein notify zu viel
@@ -335,7 +334,6 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		})
 	}
 }
-
 
 func (s *ProxyServer) broadcastNewJobsNH() {
 	t := s.currentBlockTemplate()
@@ -363,13 +361,13 @@ func (s *ProxyServer) broadcastNewJobsNH() {
 				SeedHash:   t.Seed,
 				HeaderHash: t.Header,
 			}
-	
+
 			// The NiceHash official .NET pool omits 0x...
 			// TO DO: clean up once everything works
-			if (cs.JobDetails.SeedHash[0:2] == "0x") {
+			if cs.JobDetails.SeedHash[0:2] == "0x" {
 				cs.JobDetails.SeedHash = cs.JobDetails.SeedHash[2:]
 			}
-			if (cs.JobDetails.HeaderHash[0:2] == "0x") {
+			if cs.JobDetails.HeaderHash[0:2] == "0x" {
 				cs.JobDetails.HeaderHash = cs.JobDetails.HeaderHash[2:]
 			}
 

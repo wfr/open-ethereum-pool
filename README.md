@@ -2,7 +2,7 @@
 
 ![Miner's stats page](https://user-images.githubusercontent.com/7374093/31591180-43c72364-b236-11e7-8d47-726cd66b876a.png)
 
-[![Join the chat at https://gitter.im/sammy007/open-ethereum-pool](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/sammy007/open-ethereum-pool?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/sammy007/open-ethereum-pool.svg?branch=develop)](https://travis-ci.org/sammy007/open-ethereum-pool) [![Go Report Card](https://goreportcard.com/badge/github.com/sammy007/open-ethereum-pool)](https://goreportcard.com/report/github.com/sammy007/open-ethereum-pool)
+[![Join the chat at https://gitter.im/blockmaintain/open-ethereum-pool-nh](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/blockmaintain/open-ethereum-pool-nh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/blockmaintain/open-ethereum-pool-nh.svg?branch=develop)](https://travis-ci.org/blockmaintain/open-ethereum-pool-nh) [![Go Report Card](https://goreportcard.com/badge/github.com/blockmaintain/open-ethereum-pool-nh)](https://goreportcard.com/report/github.com/blockmaintain/open-ethereum-pool-nh)
 
 ### Features
 
@@ -37,7 +37,7 @@ First install  [go-ethereum](https://github.com/ethereum/go-ethereum/wiki/Instal
 Clone & compile:
 
     git config --global http.https://gopkg.in.followRedirects true
-    git clone https://github.com/sammy007/open-ethereum-pool.git
+    git clone https://github.com/blockmaintain/open-ethereum-pool-nh.git
     cd open-ethereum-pool
     make
 

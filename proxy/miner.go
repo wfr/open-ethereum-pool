@@ -6,16 +6,14 @@ import (
 	"strconv"
 	"strings"
 	//"encoding/hex"
-	_"github.com/davecgh/go-spew/spew"
 
-	"github.com/wfr/ethash-nh"
+	"github.com/ethereum/ethash"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 var hasher = ethash.New()
-
 
 // processShare params:
 // params[0] = nonce
@@ -23,7 +21,7 @@ var hasher = ethash.New()
 // params[2] = mixDigest
 
 //// NiceHash share processing
-func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, params[]string) (bool, bool) { // (exist, validShare)
+func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, params []string) (bool, bool) { // (exist, validShare)
 	nonceHex := params[0]
 	nonce, _ := strconv.ParseUint(strings.Replace(nonceHex, "0x", "", -1), 16, 64)
 	hashNoNonce := common.HexToHash(params[2])
@@ -33,8 +31,8 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 	// diffFloat => target; then: diffInt = 2^256 / target
 
 	shareDiffFloat, mixDigest := hasher.GetShareDiff(t.Height, hashNoNonce, nonce)
-	
-	// temporary 
+
+	// temporary
 	if shareDiffFloat < 0.0001 {
 		log.Printf("share difficulty too low, %f < %d, from %v@%v", shareDiffFloat, t.Difficulty, login, ip)
 		return false, false
@@ -72,7 +70,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 		nonce:       nonce,
 		mixDigest:   common.HexToHash(mixDigest.Hex()),
 	}
-	
+
 	if !hasher.Verify(share) {
 		log.Println("!hasher.Verify(share)")
 		return false, false
@@ -118,7 +116,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	mixDigest := params[2]
 	nonce, _ := strconv.ParseUint(strings.Replace(nonceHex, "0x", "", -1), 16, 64)
 	shareDiff := s.config.Proxy.Difficulty
-	
+
 	h, ok := t.headers[hashNoNonce]
 	if !ok {
 		log.Printf("Stale share from %v@%v", login, ip)
@@ -140,7 +138,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 		nonce:       nonce,
 		mixDigest:   common.HexToHash(mixDigest),
 	}
-	
+
 	if !hasher.Verify(share) {
 		return false, false
 	}

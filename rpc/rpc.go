@@ -14,7 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type RPCClient struct {
