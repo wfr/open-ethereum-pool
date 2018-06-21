@@ -1,10 +1,10 @@
 package proxy
 
 import (
-	"github.com/sammy007/open-ethereum-pool/api"
-	"github.com/sammy007/open-ethereum-pool/payouts"
-	"github.com/sammy007/open-ethereum-pool/policy"
-	"github.com/sammy007/open-ethereum-pool/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/api"
+	"github.com/blockmaintain/open-ethereum-pool-nh/payouts"
+	"github.com/blockmaintain/open-ethereum-pool-nh/policy"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
 )
 
 type Config struct {
@@ -29,16 +29,16 @@ type Config struct {
 }
 
 type Proxy struct {
-	Enabled              bool   `json:"enabled"`
-	Listen               string `json:"listen"`
-	LimitHeadersSize     int    `json:"limitHeadersSize"`
-	LimitBodySize        int64  `json:"limitBodySize"`
-	BehindReverseProxy   bool   `json:"behindReverseProxy"`
-	BlockRefreshInterval string `json:"blockRefreshInterval"`
-	Difficulty           int64  `json:"difficulty"`
+	Enabled              bool    `json:"enabled"`
+	Listen               string  `json:"listen"`
+	LimitHeadersSize     int     `json:"limitHeadersSize"`
+	LimitBodySize        int64   `json:"limitBodySize"`
+	BehindReverseProxy   bool    `json:"behindReverseProxy"`
+	BlockRefreshInterval string  `json:"blockRefreshInterval"`
+	Difficulty           int64   `json:"difficulty"`
 	DifficultyNiceHash   float64 `json:"difficultyNiceHash"`
-	StateUpdateInterval  string `json:"stateUpdateInterval"`
-	HashrateExpiration   string `json:"hashrateExpiration"`
+	StateUpdateInterval  string  `json:"stateUpdateInterval"`
+	HashrateExpiration   string  `json:"hashrateExpiration"`
 
 	Policy policy.Config `json:"policy"`
 

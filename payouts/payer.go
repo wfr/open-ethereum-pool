@@ -10,9 +10,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/sammy007/open-ethereum-pool/rpc"
-	"github.com/sammy007/open-ethereum-pool/storage"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/rpc"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 const txCheckInterval = 5 * time.Second
@@ -201,12 +201,18 @@ func (u *PayoutsProcessor) process() {
 			receipt, err := u.rpc.GetTxReceipt(txHash)
 			if err != nil {
 				log.Printf("Failed to get tx receipt for %v: %v", txHash, err)
+				continue
 			}
+			// Tx has been mined
 			if receipt != nil && receipt.Confirmed() {
+				if receipt.Successful() {
+					log.Printf("Payout tx successful for %s: %s", login, txHash)
+				} else {
+					log.Printf("Payout tx failed for %s: %s. Address contract throws on incoming tx.", login, txHash)
+				}
 				break
 			}
 		}
-		log.Printf("Payout tx for %s confirmed: %s", login, txHash)
 	}
 
 	if mustPay > 0 {
