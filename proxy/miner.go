@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	//"encoding/hex"
-	_ "github.com/davecgh/go-spew/spew"
 
 	"github.com/ethereum/ethash"
 	"github.com/ethereum/go-ethereum/common"

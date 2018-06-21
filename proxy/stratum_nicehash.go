@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/blockmaintain/open-ethereum-pool-nh/util"
-	_ "github.com/davecgh/go-spew/spew"
 )
 
 func (s *ProxyServer) ListenNiceHashTCP() {
