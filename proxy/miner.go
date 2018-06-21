@@ -7,7 +7,7 @@ import (
 	"strings"
 	//"encoding/hex"
 
-	"github.com/ethereum/ethash"
+	"github.com/wfr/ethash-nh"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/blockmaintain/open-ethereum-pool-nh/util"
