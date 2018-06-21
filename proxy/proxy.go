@@ -13,10 +13,10 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/sammy007/open-ethereum-pool/policy"
-	"github.com/sammy007/open-ethereum-pool/rpc"
-	"github.com/sammy007/open-ethereum-pool/storage"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/policy"
+	"github.com/blockmaintain/open-ethereum-pool-nh/rpc"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type ProxyServer struct {
@@ -31,14 +31,14 @@ type ProxyServer struct {
 	failsCount         int64
 
 	// Stratum
-	sessionsMu         sync.RWMutex
-	sessions           map[*Session]struct{}
-	timeout            time.Duration
+	sessionsMu sync.RWMutex
+	sessions   map[*Session]struct{}
+	timeout    time.Duration
 }
 
 type jobDetails struct {
-	JobID string
-	SeedHash string
+	JobID      string
+	SeedHash   string
 	HeaderHash string
 }
 
@@ -48,11 +48,11 @@ type Session struct {
 
 	// Stratum
 	sync.Mutex
-	conn  *net.TCPConn
-	login string
+	conn           *net.TCPConn
+	login          string
 	subscriptionID string
-	Extranonce         string
-	JobDetails jobDetails
+	Extranonce     string
+	JobDetails     jobDetails
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {

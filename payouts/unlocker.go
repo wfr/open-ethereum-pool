@@ -10,9 +10,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/math"
 
-	"github.com/sammy007/open-ethereum-pool/rpc"
-	"github.com/sammy007/open-ethereum-pool/storage"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/rpc"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type UnlockerConfig struct {
@@ -26,13 +26,18 @@ type UnlockerConfig struct {
 	Interval       string  `json:"interval"`
 	Daemon         string  `json:"daemon"`
 	Timeout        string  `json:"timeout"`
+	ClassicChain   bool    `json:"classicChain"`
 }
 
 const minDepth = 16
 const byzantiumHardForkHeight = 4370000
+const reducedClassicReward = 5000000
 
 var homesteadReward = math.MustParseBig256("5000000000000000000")
 var byzantiumReward = math.MustParseBig256("3000000000000000000")
+var classicReward = math.MustParseBig256("4000000000000000000")
+var classicBaseReward = math.MustParseBig256("5000000000000000000")
+var isClassic bool
 
 // Donate 10% from pool fees to developers
 const donationFee = 10.0
@@ -58,6 +63,7 @@ func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient) *BlockU
 	}
 	u := &BlockUnlocker{config: cfg, backend: backend}
 	u.rpc = rpc.NewRPCClient("BlockUnlocker", cfg.Daemon, cfg.Timeout)
+	isClassic = cfg.ClassicChain
 	return u
 }
 
@@ -502,6 +508,12 @@ func weiToShannonInt64(wei *big.Rat) int64 {
 }
 
 func getConstReward(height int64) *big.Int {
+	if isClassic {
+		if height >= reducedClassicReward {
+			return new(big.Int).Set(classicReward)
+		}
+		return new(big.Int).Set(classicBaseReward)
+	}
 	if height >= byzantiumHardForkHeight {
 		return new(big.Int).Set(byzantiumReward)
 	}
@@ -510,11 +522,18 @@ func getConstReward(height int64) *big.Int {
 
 func getRewardForUncle(height int64) *big.Int {
 	reward := getConstReward(height)
+	log.Printf("Uncle reward amount from getRewardForUncle %s", new(big.Int).Div(reward, new(big.Int).SetInt64(32)))
 	return new(big.Int).Div(reward, new(big.Int).SetInt64(32))
 }
 
 func getUncleReward(uHeight, height int64) *big.Int {
 	reward := getConstReward(height)
+	if isClassic {
+		reward.Mul(reward, big.NewInt(3125))
+		reward.Div(reward, big.NewInt(100000))
+		log.Printf("Uheight: %d, height %d, Uncle reward amount from getUncleReward %s", uHeight, height, reward)
+		return reward
+	}
 	k := height - uHeight
 	reward.Mul(big.NewInt(8-k), reward)
 	reward.Div(reward, big.NewInt(8))
