@@ -285,8 +285,14 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 			log.Println("Params: ")
 			log.Printf("%v", params)
 		}
-
-		id := splitData[1]
+		//Potential fix for above
+		var id string
+		if len(splitData) < 2 {
+			id = "worker"
+		}
+		else{
+			id = splitData[1]
+		}
 
 		if cs.JobDetails.JobID != params[1] {
 			log.Printf("Stale share (mining.submit JobID received %s != current %s)", params[1], cs.JobDetails.JobID)
