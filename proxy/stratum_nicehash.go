@@ -289,8 +289,7 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		var id string
 		if len(splitData) < 2 {
 			id = "worker"
-		}
-		else{
+		} else {
 			id = splitData[1]
 		}
 
