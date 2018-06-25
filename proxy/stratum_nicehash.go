@@ -279,7 +279,7 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		// WILL CRASH IF OMITTED
 		// FIX ME: pool shouldn't crash. reject submission instead.
 		//Debugging for above FIX ME
-		if len(params[0] < 2) {
+		if len(params[0]) < 2 {
 			log.Println("Params: ")
 			log.Printf("%v", params)
 		}
