@@ -278,12 +278,14 @@ func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 		// WORKER NAME MANDATORY  0x1234.WORKERNAME
 		// WILL CRASH IF OMITTED
 		// FIX ME: pool shouldn't crash. reject submission instead.
+		splitData := strings.Split(params[0], ".")
+
 		//Debugging for above FIX ME
-		if len(params[0]) < 2 {
+		if len(splitData) < 2 {
 			log.Println("Params: ")
 			log.Printf("%v", params)
 		}
-		splitData := strings.Split(params[0], ".")
+
 		id := splitData[1]
 
 		if cs.JobDetails.JobID != params[1] {
