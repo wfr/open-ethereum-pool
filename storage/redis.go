@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/redis.v3"
 
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type Config struct {
@@ -162,7 +162,7 @@ func (r *RedisClient) GetNodeStates() ([]map[string]interface{}, error) {
 func (r *RedisClient) checkPoWExist(height uint64, params []string) (bool, error) {
 	// Sweep PoW backlog for previous blocks, we have 3 templates back in RAM
 	r.client.ZRemRangeByScore(r.formatKey("pow"), "-inf", fmt.Sprint("(", height-8))
-	
+
 	// DEBUG
 	//fmt.Println(strings.Join(params, ":"))
 

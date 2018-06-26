@@ -9,8 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/sammy007/open-ethereum-pool/rpc"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/rpc"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 const maxBacklog = 3
@@ -97,7 +97,7 @@ func (s *ProxyServer) fetchBlockTemplate() {
 		//go s.broadcastNewJobs()
 	}
 
-	if s.config.Proxy.StratumNiceHash.Enabled{
+	if s.config.Proxy.StratumNiceHash.Enabled {
 		go s.broadcastNewJobsNH()
 	}
 }
