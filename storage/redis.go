@@ -164,7 +164,8 @@ func (r *RedisClient) checkPoWExist(height uint64, params []string) (bool, error
 	r.client.ZRemRangeByScore(r.formatKey("pow"), "-inf", fmt.Sprint("(", height-8))
 
 	// DEBUG
-	//fmt.Println(strings.Join(params, ":"))
+	fmt.Println("Checking POW backlog... params: ")
+	fmt.Println(strings.Join(params, ":"))
 
 	val, err := r.client.ZAdd(r.formatKey("pow"), redis.Z{Score: float64(height), Member: strings.Join(params, ":")}).Result()
 	return val == 0, err
@@ -188,6 +189,29 @@ func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, 
 	_, err = tx.Exec(func() error {
 		r.writeShare(tx, ms, ts, login, id, diff, window)
 		tx.HIncrBy(r.formatKey("stats"), "roundShares", diff)
+		return nil
+	})
+	return false, err
+}
+
+func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff int64, height uint64, window time.Duration) (bool, error) {
+	exist, err := r.checkPoWExist(height, params)
+	if err != nil {
+		return false, err
+	}
+	// Duplicate share, (nonce, powHash, mixDigest) pair exist
+	if exist {
+		return true, nil
+	}
+	tx := r.client.Multi()
+	defer tx.Close()
+
+	ms := util.MakeTimestamp()
+	ts := ms / 1000
+
+	_, err = tx.Exec(func() error {
+		r.writeShare(tx, ms, ts, login, id, diff, window)
+		tx.HIncrBy(r.formatKey("stats"), "pplnsShares", diff)
 		return nil
 	})
 	return false, err
@@ -236,6 +260,14 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
+	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
+	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
+	tx.Expire(r.formatKey("hashrate", login), expire) // Will delete hashrates for miners that gone
+	tx.HSet(r.formatKey("miners", login), "lastShare", strconv.FormatInt(ts, 10))
+}
+
+func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
+	tx.Set(r.formatKey("shares", "pplns", login), diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
 	tx.Expire(r.formatKey("hashrate", login), expire) // Will delete hashrates for miners that gone

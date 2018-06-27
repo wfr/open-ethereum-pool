@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 	//"encoding/hex"
-
-	"github.com/wfr/ethash-nh"
+	_ "github.com/davecgh/go-spew/spew"
+	"github.com/ethereum/ethash"
 	"github.com/ethereum/go-ethereum/common"
+	_ "github.com/wfr/ethash-nh"
 
 	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
@@ -97,7 +98,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 			log.Printf("Block found by miner %v@%v at height %d", login, ip, h.height)
 		}
 	} else {
-		exist, err := s.backend.WriteShare(login, id, submit_params, shareDiff, h.height, s.hashrateExpiration)
+		exist, err := s.backend.WritePPLNSShare(login, id, submit_params, shareDiff, h.height, s.hashrateExpiration)
 		if exist {
 			return true, false
 		}
