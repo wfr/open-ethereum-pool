@@ -210,7 +210,7 @@ func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff in
 	ts := ms / 1000
 
 	_, err = tx.Exec(func() error {
-		r.writeShare(tx, ms, ts, login, id, diff, window)
+		r.writePPLNSShare(tx, ms, ts, login, id, diff, window)
 		tx.HIncrBy(r.formatKey("stats"), "pplnsShares", diff)
 		return nil
 	})
@@ -267,7 +267,7 @@ func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string
 }
 
 func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
-	tx.Set(r.formatKey("shares", "pplns", login), diff)
+	tx.HSet(r.formatKey("shares", "pplns", login), "difficulty", diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
 	tx.Expire(r.formatKey("hashrate", login), expire) // Will delete hashrates for miners that gone
