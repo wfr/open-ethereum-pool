@@ -260,6 +260,47 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 	}
 }
 
+func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, roundDiff int64, height uint64, window time.Duration) (bool, error) {
+	exist, err := r.checkPoWExist(height, params)
+	if err != nil {
+		return false, err
+	}
+	// Duplicate share, (nonce, powHash, mixDigest) pair exist
+	if exist {
+		return true, nil
+	}
+	tx := r.client.Multi()
+	defer tx.Close()
+
+	ms := util.MakeTimestamp()
+	ts := ms / 1000
+
+	cmds, err := tx.Exec(func() error {
+		r.writePPLNSShare(tx, ms, ts, login, id, diff, window)
+		tx.HSet(r.formatKey("stats"), "lastBlockFound", strconv.FormatInt(ts, 10))
+		tx.HDel(r.formatKey("stats"), "roundShares")
+		tx.ZIncrBy(r.formatKey("finders"), 1, login)
+		tx.HIncrBy(r.formatKey("miners", login), "blocksFound", 1)
+		tx.Rename(r.formatKey("shares", "roundCurrent"), r.formatRound(int64(height), params[0]))
+		tx.HGetAllMap(r.formatRound(int64(height), params[0]))
+		return nil
+	})
+	if err != nil {
+		return false, err
+	} else {
+		sharesMap, _ := cmds[10].(*redis.StringStringMapCmd).Result()
+		totalShares := int64(0)
+		for _, v := range sharesMap {
+			n, _ := strconv.ParseInt(v, 10, 64)
+			totalShares += n
+		}
+		hashHex := strings.Join(params, ":")
+		s := join(hashHex, ts, roundDiff, totalShares)
+		cmd := r.client.ZAdd(r.formatKey("blocks", "candidates"), redis.Z{Score: float64(height), Member: s})
+		return false, cmd.Err()
+	}
+}
+
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
