@@ -195,7 +195,7 @@ func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, 
 	return false, err
 }
 
-func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff int64, height uint64, window time.Duration) (bool, error) {
+func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff float64, height uint64, window time.Duration) (bool, error) {
 	fmt.Println("************************************************** Writing PPLNS shares **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
