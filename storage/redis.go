@@ -213,7 +213,7 @@ func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff fl
 
 	_, err = tx.Exec(func() error {
 		r.writePPLNSShare(tx, ms, ts, login, id, diff, window, params)
-		tx.HIncrBy(r.formatKey("stats"), "pplnsShares", diff)
+		//tx.HIncrBy(r.formatKey("stats"), "pplnsShares", diff)
 		return nil
 	})
 	return false, err
