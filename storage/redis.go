@@ -279,7 +279,7 @@ func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, r
 	ts := ms / 1000
 
 	cmds, err := tx.Exec(func() error {
-		r.writePPLNSShare(tx, ms, ts, login, id, diff, window)
+		r.writePPLNSShare(tx, ms, ts, login, id, diff, window, params)
 		tx.HSet(r.formatKey("stats"), "lastBlockFound", strconv.FormatInt(ts, 10))
 		tx.HDel(r.formatKey("stats"), "roundShares")
 		tx.ZIncrBy(r.formatKey("finders"), 1, login)
@@ -314,10 +314,10 @@ func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string
 	tx.HSet(r.formatKey("miners", login), "lastShare", strconv.FormatInt(ts, 10))
 }
 
-func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
+func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration, params []string) {
 	//Debug
 	fmt.Println("************************************************** Writing PPLNS shares to backend **************************************************")
-	res := tx.HSet(r.formatKey("shares", "pplns", login), "difficulty", strconv.FormatInt(diff, 10))
+	res := tx.HSet(r.formatKey("shares", "pplns"), login+":"+strings.Join(params, ":"), strconv.FormatInt(diff, 10))
 	fmt.Println(res.Val)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
