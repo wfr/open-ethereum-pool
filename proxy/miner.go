@@ -43,6 +43,9 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 	shareDiff_big := util.DiffFloatToDiffInt(shareDiffFloat)
 	shareDiff := shareDiff_big.Int64()
 
+	//Computer Score for share shareDiff / network difficulty
+	shareScore := shareDiff / t.Difficulty
+
 	submit_params := []string{
 		nonceHex,
 		hashNoNonce.Hex(),
@@ -85,7 +88,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 			return false, false
 		} else {
 			s.fetchBlockTemplate()
-			exist, err := s.backend.WritePPLNSBlock(login, id, submit_params, shareDiff, h.diff.Int64(), h.height, s.hashrateExpiration)
+			exist, err := s.backend.WritePPLNSBlock(login, id, submit_params, shareScore, h.diff.Int64(), h.height, s.hashrateExpiration)
 			if exist {
 				return true, false
 			}
@@ -97,7 +100,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 			log.Printf("Block found by miner %v@%v at height %d", login, ip, h.height)
 		}
 	} else {
-		exist, err := s.backend.WritePPLNSShare(login, id, submit_params, shareDiff, h.height, s.hashrateExpiration)
+		exist, err := s.backend.WritePPLNSShare(login, id, submit_params, shareScore, h.height, s.hashrateExpiration)
 		if exist {
 			return true, false
 		}
