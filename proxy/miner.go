@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -45,6 +46,10 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 
 	//Computer Score for share shareDiff / network difficulty
 	shareScore := shareDiff / t.Difficulty.Int64()
+	//Debug
+	fmt.Printf("shareDiff: %d", shareDiff)
+	fmt.Printf("blockDiff: %d", t.Difficulty.Int64())
+	fmt.Printf("sharescore: %d", shareScore)
 
 	submit_params := []string{
 		nonceHex,
