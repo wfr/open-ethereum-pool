@@ -291,10 +291,10 @@ func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, r
 	if err != nil {
 		return false, err
 	} else {
-		sharesMap, _ := cmds[10].(*redis.StringStringMapCmd).Result()
+		sharesMap, _ := cmds[9].(*redis.StringStringMapCmd).Result()
 		totalShares := int64(0)
 		for _, v := range sharesMap {
-			n, _ := strconv.ParseInt(v, 10, 64)
+			n, _ := strconv.ParseInt(v, 9, 64)
 			totalShares += n
 		}
 		hashHex := strings.Join(params, ":")
