@@ -48,7 +48,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 	nhShareDiff := s.config.Proxy.DifficultyNiceHash
 	blockDiffFloat := new(big.Float).SetInt(t.Difficulty)
 	//Computer Score for share shareDiff / network difficulty
-	shareScore := nhShareDiff / blockDiffFloat
+	shareScore := nhShareDiff / blockDiffFloat.Float64
 	//Debugq
 	fmt.Printf("nhShareDiff: %d", nhShareDiff)
 	fmt.Printf("blockDiff: %d", t.Difficulty.Int64())
