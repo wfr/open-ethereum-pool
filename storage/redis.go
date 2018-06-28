@@ -172,7 +172,7 @@ func (r *RedisClient) checkPoWExist(height uint64, params []string) (bool, error
 }
 
 func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, height uint64, window time.Duration) (bool, error) {
-	fmt.Println("Writing regular shareS")
+	fmt.Println("************************************************** Writing regular shareS **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
@@ -196,7 +196,7 @@ func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, 
 }
 
 func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff int64, height uint64, window time.Duration) (bool, error) {
-	fmt.Println("Writing PPLNS shares")
+	fmt.Println("************************************************** Writing PPLNS shares **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
@@ -261,6 +261,8 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 }
 
 func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, roundDiff int64, height uint64, window time.Duration) (bool, error) {
+	//debug
+	fmt.Println("************************************************** Writing PPLNS block **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
@@ -302,6 +304,8 @@ func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, r
 }
 
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
+	//Debug
+	fmt.Println("************************************************** Writing SHARE to backend **************************************************")
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
@@ -311,7 +315,7 @@ func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string
 
 func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
 	//Debug
-	fmt.Println("Writing PPLNS shares to backend")
+	fmt.Println("************************************************** Writing PPLNS shares to backend **************************************************")
 	res := tx.HSet(r.formatKey("shares", "pplns", login), "difficulty", strconv.FormatInt(diff, 10))
 	fmt.Println(res.Val)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
