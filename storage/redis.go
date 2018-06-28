@@ -261,7 +261,7 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 	}
 }
 
-func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, roundDiff int64, height uint64, window time.Duration) (bool, error) {
+func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, shareScore float64, roundDiff int64, height uint64, window time.Duration) (bool, error) {
 	//debug
 	fmt.Println("************************************************** Writing PPLNS block **************************************************")
 	exist, err := r.checkPoWExist(height, params)
@@ -279,7 +279,7 @@ func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, diff, r
 	ts := ms / 1000
 
 	cmds, err := tx.Exec(func() error {
-		r.writePPLNSShare(tx, ms, ts, login, id, diff, window, params)
+		r.writePPLNSShare(tx, ms, ts, login, id, shareScore, window, params)
 		tx.HSet(r.formatKey("stats"), "lastBlockFound", strconv.FormatInt(ts, 10))
 		tx.HDel(r.formatKey("stats"), "roundShares")
 		tx.ZIncrBy(r.formatKey("finders"), 1, login)
@@ -315,10 +315,10 @@ func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string
 	tx.HSet(r.formatKey("miners", login), "lastShare", strconv.FormatInt(ts, 10))
 }
 
-func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration, params []string) {
+func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff float64, expire time.Duration, params []string) {
 	//Debug
 	fmt.Println("************************************************** Writing PPLNS shares to backend **************************************************")
-	res := tx.HSet(r.formatKey("shares", "pplns"), login+":"+strings.Join(params, ":"), strconv.FormatInt(diff, 10))
+	res := tx.HSet(r.formatKey("shares", "pplns"), login+":"+strings.Join(params, ":"), strconv.FormatFloat(diff, 'g', 1000, 64))
 	fmt.Println(res.Val)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
