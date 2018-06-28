@@ -33,6 +33,10 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 
 	shareDiffFloat, mixDigest := hasher.GetShareDiff(t.Height, hashNoNonce, nonce)
 
+	//Debug
+	fmt.Println("ShareDiffFloat: ")
+	fmt.Println(shareDiffFloat)
+
 	// temporary
 	if shareDiffFloat < 0.0001 {
 		log.Printf("share difficulty too low, %f < %d, from %v@%v", shareDiffFloat, t.Difficulty, login, ip)
