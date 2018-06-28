@@ -220,6 +220,7 @@ func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff in
 }
 
 func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundDiff int64, height uint64, window time.Duration) (bool, error) {
+	fmt.Println("************************************************** Writing regular Block  **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
