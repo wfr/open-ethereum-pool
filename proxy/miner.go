@@ -44,7 +44,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 	shareDiff := shareDiff_big.Int64()
 
 	//Computer Score for share shareDiff / network difficulty
-	shareScore := shareDiff / t.Difficulty
+	shareScore := shareDiff_big / t.Difficulty
 
 	submit_params := []string{
 		nonceHex,
