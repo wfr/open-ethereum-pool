@@ -33,10 +33,6 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 
 	shareDiffFloat, mixDigest := hasher.GetShareDiff(t.Height, hashNoNonce, nonce)
 
-	//Debug
-	fmt.Println("ShareDiffFloat: ")
-	fmt.Println(shareDiffFloat)
-
 	// temporary
 	if shareDiffFloat < 0.0001 {
 		log.Printf("share difficulty too low, %f < %d, from %v@%v", shareDiffFloat, t.Difficulty, login, ip)
@@ -50,10 +46,10 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 
 	//Change this to get the miners current difficulty if/when vardiff is implemented
 	nhShareDiff := s.config.Proxy.DifficultyNiceHash
-
+	blockDiffFloat := new(big.Float).SetInt(t.Difficulty)
 	//Computer Score for share shareDiff / network difficulty
-	shareScore := shareDiff / t.Difficulty.Int64()
-	//Debug
+	shareScore := nhShareDiff / blockDiffFloat
+	//Debugq
 	fmt.Printf("nhShareDiff: %d", nhShareDiff)
 	fmt.Printf("blockDiff: %d", t.Difficulty.Int64())
 	fmt.Printf("sharescore: %d", shareScore)
