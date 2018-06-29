@@ -89,7 +89,7 @@ func main() {
 		log.Printf("Cant establish connection to sql:")
 		log.Println(err)
 	}
-	if err := sql.Ping; err != nil {
+	if err := sql.Ping(); err != nil {
 		log.Printf("Cant establish connection to sql:")
 		log.Println(err)
 	} else {
