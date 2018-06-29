@@ -86,13 +86,16 @@ func main() {
 	var err error
 	sql, err = storage.NewSqlClient(&cfg.SQL)
 	if err != nil {
-		log.Printf("Cant establish connection to sql: %v", err)
+		log.Printf("Cant establish connection to sql:")
+		log.Println(err)
 	}
 	if err := sql.Ping; err != nil {
-		log.Printf("Cant establish connection to sql: %v", err)
+		log.Printf("Cant establish connection to sql:")
+		log.Println(err)
 	} else {
 		log.Printf("Connection to sql established")
 	}
+
 	backend = storage.NewRedisClient(&cfg.Redis, cfg.Coin)
 	pong, err := backend.Check()
 	if err != nil {

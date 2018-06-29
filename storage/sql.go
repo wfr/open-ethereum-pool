@@ -2,7 +2,7 @@ package storage
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -68,7 +68,7 @@ func (s *SqlClient) InsertShares(address, nonce, hashNonce, score string) (sql.R
 
 func NewSqlClient(cfg *SqlConfig) (*SqlClient, error) {
 	//debug
-	fmt.Printf("Connection string %s", cfg.UserName+":"+cfg.Password+"@tcp("+cfg.Endpoint+")/"+cfg.DataBase)
+	log.Printf("Connection string %s", cfg.UserName+":"+cfg.Password+"@tcp("+cfg.Endpoint+")/"+cfg.DataBase)
 	db, err := sql.Open("mysql", cfg.UserName+":"+cfg.Password+"@tcp("+cfg.Endpoint+")/"+cfg.DataBase)
 	return &SqlClient{client: db}, err
 }
