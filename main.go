@@ -83,7 +83,8 @@ func main() {
 
 	startNewrelic()
 
-	sql, err := storage.NewSqlClient(&cfg.SQL)
+	var err error
+	sql, err = storage.NewSqlClient(&cfg.SQL)
 	if err != nil {
 		log.Printf("Cant establish connection to sql: %v", err)
 	}
