@@ -21,9 +21,10 @@ import (
 
 var cfg proxy.Config
 var backend *storage.RedisClient
+var sql *storage.SqlClient
 
 func startProxy() {
-	s := proxy.NewProxy(&cfg, backend)
+	s := proxy.NewProxy(&cfg, backend, sql)
 	s.Start()
 }
 
@@ -38,7 +39,7 @@ func startBlockUnlocker() {
 }
 
 func startPayoutsProcessor() {
-	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend)
+	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend, sql)
 	u.Start()
 }
 
@@ -81,6 +82,11 @@ func main() {
 	}
 
 	startNewrelic()
+
+	sql, err = storage.NewSqlClient(&cfg.SqlConfig)
+	if err != nil {
+		log.Printf("Cant establish connection to sql: %v", err)
+	}
 
 	backend = storage.NewRedisClient(&cfg.Redis, cfg.Coin)
 	pong, err := backend.Check()

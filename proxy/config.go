@@ -16,9 +16,9 @@ type Config struct {
 
 	Threads int `json:"threads"`
 
-	Coin  string         `json:"coin"`
-	Redis storage.Config `json:"redis"`
-
+	Coin          string                 `json:"coin"`
+	Redis         storage.Config         `json:"redis"`
+	SQL           storage.SqlConfig      `json:"sql"`
 	BlockUnlocker payouts.UnlockerConfig `json:"unlocker"`
 	Payouts       payouts.PayoutsConfig  `json:"payouts"`
 

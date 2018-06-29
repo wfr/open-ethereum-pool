@@ -87,6 +87,13 @@
 		"password": ""
 	},
 
+	"sql": {
+		"endpoint": "127.0.0.1:6379",
+		"username": "root",
+		"database": "pool",
+		"password": "minemine"
+	},
+
 	"unlocker": {
 		"enabled": false,
 		"poolFee": 1.0,

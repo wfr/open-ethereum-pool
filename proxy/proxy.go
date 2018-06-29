@@ -25,6 +25,7 @@ type ProxyServer struct {
 	upstream           int32
 	upstreams          []*rpc.RPCClient
 	backend            *storage.RedisClient
+	SQL                *storage.SqlClient
 	diff               string
 	policy             *policy.PolicyServer
 	hashrateExpiration time.Duration
@@ -55,13 +56,13 @@ type Session struct {
 	JobDetails     jobDetails
 }
 
-func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
+func NewProxy(cfg *Config, backend *storage.RedisClient, sql *storage.SqlClient) *ProxyServer {
 	if len(cfg.Name) == 0 {
 		log.Fatal("You must set instance name")
 	}
-	policy := policy.Start(&cfg.Proxy.Policy, backend)
+	policy := policy.Start(&cfg.Proxy.Policy, backend, sql)
 
-	proxy := &ProxyServer{config: cfg, backend: backend, policy: policy}
+	proxy := &ProxyServer{config: cfg, backend: backend, policy: policy, sql: sql}
 	proxy.diff = util.GetTargetHex(cfg.Proxy.Difficulty)
 
 	proxy.upstreams = make([]*rpc.RPCClient, len(cfg.Upstream))

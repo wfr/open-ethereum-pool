@@ -45,12 +45,13 @@ func (self PayoutsConfig) GasPriceHex() string {
 type PayoutsProcessor struct {
 	config   *PayoutsConfig
 	backend  *storage.RedisClient
+	sql		 *storage,SqlClient
 	rpc      *rpc.RPCClient
 	halt     bool
 	lastFail error
 }
 
-func NewPayoutsProcessor(cfg *PayoutsConfig, backend *storage.RedisClient) *PayoutsProcessor {
+func NewPayoutsProcessor(cfg *PayoutsConfig, backend *storage.RedisClient, sql *storage.SqlClient) *PayoutsProcessor {
 	u := &PayoutsProcessor{config: cfg, backend: backend}
 	u.rpc = rpc.NewRPCClient("PayoutsProcessor", cfg.Daemon, cfg.Timeout)
 	return u
