@@ -8,8 +8,8 @@ import (
 
 type SqlConfig struct {
 	Endpoint string `json:"endpoint"`
-	UserName int64  `json:"username"`
-	DataBase int    `json:"database"`
+	UserName string `json:"username"`
+	DataBase string `json:"database"`
 	Password string `json:"password"`
 }
 
