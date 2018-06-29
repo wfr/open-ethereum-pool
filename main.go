@@ -88,7 +88,11 @@ func main() {
 	if err != nil {
 		log.Printf("Cant establish connection to sql: %v", err)
 	}
-
+	if err := sql.Ping; err != nil {
+		log.Printf("Cant establish connection to sql: %v", err)
+	} else {
+		log.Printf("Connection to sql established")
+	}
 	backend = storage.NewRedisClient(&cfg.Redis, cfg.Coin)
 	pong, err := backend.Check()
 	if err != nil {
