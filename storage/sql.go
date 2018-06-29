@@ -66,6 +66,6 @@ func (s *SqlClient) InsertShares(address, nonce, hashNonce, score string) (sql.R
 }
 
 func NewSqlClient(cfg *SqlConfig) (*SqlClient, error) {
-	db, err := sql.Open("mysql", "root:minemine@tcp("+cfg.host+")/"+cfg.database)
+	db, err := sql.Open("mysql", "root:minemine@tcp("+cfg.Endpoint+")/"+cfg.DataBase)
 	return &SqlClient{client: db}, err
 }
