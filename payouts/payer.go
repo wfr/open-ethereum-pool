@@ -45,7 +45,7 @@ func (self PayoutsConfig) GasPriceHex() string {
 type PayoutsProcessor struct {
 	config   *PayoutsConfig
 	backend  *storage.RedisClient
-	sql		 *storage,SqlClient
+	sql      *storage.SqlClient
 	rpc      *rpc.RPCClient
 	halt     bool
 	lastFail error
