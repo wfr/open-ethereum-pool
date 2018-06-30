@@ -50,10 +50,10 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 	//Computer Score for share shareDiff / network difficulty
 	blockDiffFloat64, _ := blockDiffFloat.Float64()
 	shareScore := nhShareDiff / blockDiffFloat64
-	//Debugq
+	//Debug
 	fmt.Printf("nhShareDiff: %d", nhShareDiff)
 	fmt.Printf("blockDiff: %d", t.Difficulty.Int64())
-	fmt.Printf("sharescore: %d", shareScore)
+	fmt.Printf("sharescore: %d", strconv.FormatFloat(shareScore, 'g', 1000, 64))
 
 	submit_params := []string{
 		nonceHex,
@@ -97,7 +97,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 			return false, false
 		} else {
 			s.fetchBlockTemplate()
-			exist, err := s.backend.WritePPLNSBlock(login, id, submit_params, shareScore, h.diff.Int64(), h.height, s.hashrateExpiration)
+			exist, err := s.backend.WriteBlock(login, id, submit_params, shareScore, h.diff.Int64(), h.height, s.hashrateExpiration)
 			if exist {
 				return true, false
 			}
@@ -105,11 +105,25 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 				log.Println("Failed to insert block candidate into backend:", err)
 			} else {
 				log.Printf("Inserted block %v to backend", h.height)
+				//insert pplns share into sql now that the block is valid and submitted
+				_, err := s.SQL.InsertShare(login, params[0], params[1], shareScore)
+				if err != nil {
+					log.Println("Failed to insert share into sql:", err)
+				} else {
+					log.Printf("%s submitted share of score %s", login, shareScore)
+				}
 			}
 			log.Printf("Block found by miner %v@%v at height %d", login, ip, h.height)
 		}
 	} else {
-		exist, err := s.backend.WritePPLNSShare(login, id, submit_params, shareScore, h.height, s.hashrateExpiration)
+		//insert pplns share since no block was found
+		_, err := s.SQL.InsertShare(login, params[0], params[1], shareScore)
+		if err != nil {
+			log.Println("Failed to insert share into sql:", err)
+		} else {
+			log.Printf("%s submitted share of score %s", login, shareScore)
+		}
+		exist, err := s.backend.WriteShare(login, id, submit_params, shareScore, h.height, s.hashrateExpiration)
 		if exist {
 			return true, false
 		}

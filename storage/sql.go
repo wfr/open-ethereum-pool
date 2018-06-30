@@ -53,7 +53,7 @@ func (s *SqlClient) GetAllShares() ([]ShareData, error) {
 	return result, nil
 }
 
-func (s *SqlClient) InsertShares(address, nonce, hashNonce, score string) (sql.Result, error) {
+func (s *SqlClient) InsertShare(address, nonce, hashNonce, score string) (sql.Result, error) {
 	stmt, err := s.client.Prepare("Insert into shares(address, nonce, hash_nonce, score) VALUES(?,?,?,?)")
 	if err != nil {
 		return nil, err
