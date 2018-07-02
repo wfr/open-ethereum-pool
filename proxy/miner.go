@@ -3,6 +3,7 @@ package proxy
 import (
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -47,13 +48,14 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 	//Change this to get the miners current difficulty if/when vardiff is implemented
 	nhShareDiff := s.config.Proxy.DifficultyNiceHash
 	blockDiffFloat := new(big.Float).SetInt(t.Difficulty)
-	//Computer Score for share shareDiff / network difficulty
+	//Compute Score for share shareDiff / network difficulty
 	blockDiffFloat64, _ := blockDiffFloat.Float64()
-	shareScore := nhShareDiff / blockDiffFloat64
+	conversionConstant := math.Exp2(32.0)
+	shareScore := nhShareDiff * conversionConstant / blockDiffFloat64
 	//Debug
 	fmt.Printf("nhShareDiff: %d", nhShareDiff)
 	fmt.Printf("blockDiff: %d", t.Difficulty.Int64())
-	fmt.Printf("sharescore: %d", strconv.FormatFloat(shareScore, 'g', 1000, 64))
+	fmt.Printf("sharescore: %d", strconv.FormatFloat(shareScore, 'f', 20, 64))
 
 	submit_params := []string{
 		nonceHex,
@@ -106,7 +108,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 			} else {
 				log.Printf("Inserted block %v to backend", h.height)
 				//insert pplns share into sql now that the block is valid and submitted
-				_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'g', 1000, 64))
+				_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'f', 20, 64))
 				if err != nil {
 					log.Println("Failed to insert share into sql:", err)
 				} else {
@@ -117,7 +119,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 		}
 	} else {
 		//insert pplns share since no block was found
-		_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'g', 1000, 64))
+		_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'f', 20, 64))
 		if err != nil {
 			log.Println("Failed to insert share into sql:", err)
 		} else {
