@@ -33,13 +33,22 @@ func (s *SqlClient) CloseConnection() error {
 	return s.client.Close()
 }
 
-func (s *SqlClient) GetAllShares() ([]ShareData, error) {
-	rows, err := s.client.Query("select id, address, nonce, hash_nonce, score from shares")
-	if err != nil {
-		return nil, err
+func (s *SqlClient) GetAllShares(pageStart, pageLength int) ([]ShareData, error) {
+	var rows *sql.Rows
+	var err error
+	//TODO: poor way of doing defaults.. redo this
+	if pageStart <= 0 && pageLength <= 0 {
+		rows, err = s.client.Query("select id, address, nonce, hash_nonce, score from shares")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		rows, err = s.client.Query("select id, address, nonce, hash_nonce, score from shares order by id desc limit ?,?", pageStart, pageLength)
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer rows.Close()
-
 	var result []ShareData
 	for rows.Next() {
 		var s ShareData

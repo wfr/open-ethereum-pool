@@ -1,6 +1,7 @@
 package payouts
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -27,6 +28,7 @@ type UnlockerConfig struct {
 	Daemon         string  `json:"daemon"`
 	Timeout        string  `json:"timeout"`
 	ClassicChain   bool    `json:"classicChain"`
+	PPLNS          bool    `json:"PPLNS"`
 }
 
 const minDepth = 16
@@ -46,12 +48,13 @@ const donationAccount = "0xb85150eb365e7df0941f0cf08235f987ba91506a"
 type BlockUnlocker struct {
 	config   *UnlockerConfig
 	backend  *storage.RedisClient
+	SQL      *storage.SqlClient
 	rpc      *rpc.RPCClient
 	halt     bool
 	lastFail error
 }
 
-func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient) *BlockUnlocker {
+func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient, SQL *storage.SqlClient) *BlockUnlocker {
 	if len(cfg.PoolFeeAddress) != 0 && !util.IsValidHexAddress(cfg.PoolFeeAddress) {
 		log.Fatalln("Invalid poolFeeAddress", cfg.PoolFeeAddress)
 	}
@@ -61,7 +64,7 @@ func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient) *BlockU
 	if cfg.ImmatureDepth < minDepth {
 		log.Fatalf("Immature depth can't be < %v, your depth is %v", minDepth, cfg.ImmatureDepth)
 	}
-	u := &BlockUnlocker{config: cfg, backend: backend}
+	u := &BlockUnlocker{config: cfg, backend: backend, SQL: SQL}
 	u.rpc = rpc.NewRPCClient("BlockUnlocker", cfg.Daemon, cfg.Timeout)
 	isClassic = cfg.ClassicChain
 	return u
@@ -454,12 +457,19 @@ func (u *BlockUnlocker) calculateRewards(block *storage.BlockData) (*big.Rat, *b
 	revenue := new(big.Rat).SetInt(block.Reward)
 	minersProfit, poolProfit := chargeFee(revenue, u.config.PoolFee)
 
-	shares, err := u.backend.GetRoundShares(block.RoundHeight, block.Nonce)
-	if err != nil {
-		return nil, nil, nil, nil, err
+	var rewards map[string]int64
+	if u.config.PPLNS {
+		rewards, err = calculateRewardsForSharesPPLNS(u.SQL, minersProfit)
+		if err != nill {
+			return nil, nil, nil, nil, err
+		}
+	} else {
+		shares, err := u.backend.GetRoundShares(block.RoundHeight, block.Nonce)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		rewards = calculateRewardsForShares(shares, block.TotalShares, minersProfit)
 	}
-
-	rewards := calculateRewardsForShares(shares, block.TotalShares, minersProfit)
 
 	if block.ExtraReward != nil {
 		extraReward := new(big.Rat).SetInt(block.ExtraReward)
@@ -491,6 +501,74 @@ func calculateRewardsForShares(shares map[string]int64, total int64, reward *big
 		rewards[login] += weiToShannonInt64(workerReward)
 	}
 	return rewards
+}
+
+func calculateRewardsForSharesPPLNS(s *SqlClient, reward *big.Rat) (map[string]int64, error) {
+	pageStart := 0
+	pageLength := 10
+	//TODO Get from config or default to 2.0
+	targetScore := big.NewRat(2, 1)
+	cumulativeScore := big.NewRat(0, 1)
+	rewards := make(map[string]*big.Rat)
+	for ok := true; ok; ok = (cumulativeScore.Cmp(targetScore) == -1) {
+		//debug
+		fmt.Println("new loop")
+		shares, err := s.GetAllShares(pageStart, pageLength)
+		if len(shares) < 1 {
+			fmt.Println("Out of shares... done calculating rewards")
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		//loop through page of shares.. accumulate score for each worker and stop when target is reached
+		for i := 0; i < len(shares); i++ {
+			fmt.Println("Cumulative score before: ", cumulativeScore)
+			ratShareScore := big.NewRat(0, 1)
+			if _, ok := ratShareScore.SetString(shares[i].Score); !ok {
+				return nil, errors.New("Failed to parse share")
+			}
+			if err != nil {
+				return nil, err
+			}
+			//check if adding floatShareScore brings us above score and assign the remaining score to this share then break
+			tmp := big.NewRat(0, 1)
+			if tmp.Add(cumulativeScore, ratShareScore).Cmp(targetScore) == 1 {
+				//debug
+				fmt.Println("Remainder detected... Float sharescore was: ", ratShareScore)
+				fmt.Println("target is ", targetScore)
+				ratShareScore.Sub(targetScore, cumulativeScore)
+				fmt.Println("Remainder detected... Float sharescore is: ", ratShareScore)
+			}
+			if _, ok := rewards[shares[i].Address]; !ok {
+				rewards[shares[i].Address] = big.NewRat(0, 1)
+			}
+			rewards[shares[i].Address].Add(rewards[shares[i].Address], ratShareScore)
+			cumulativeScore.Add(cumulativeScore, ratShareScore)
+			fmt.Println("Cumulative score after: ", cumulativeScore)
+			if cumulativeScore.Cmp(targetScore) >= 0 {
+				//debug
+				fmt.Println("hit target done processing scores ", cumulativeScore)
+				break
+			}
+
+		}
+		pageStart += pageLength
+	}
+	for key, value := range rewards {
+		fmt.Println("Key:", key, "Value:", value)
+	}
+	finalReward := make(map[string]int64)
+	for login, shareScore := range rewards {
+		percent := new(big.Rat).Quo(shareScore, targetScore)
+		workerReward := new(big.Rat).Mul(reward, percent)
+		//debug
+		fmt.Println("Reward for ", login)
+		fmt.Println(workerReward)
+		finalReward[login] = weiToShannonInt64(workerReward)
+	}
+
+	return finalReward, nil
 }
 
 // Returns new value after fee deduction and fee value.
