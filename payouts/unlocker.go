@@ -458,9 +458,10 @@ func (u *BlockUnlocker) calculateRewards(block *storage.BlockData) (*big.Rat, *b
 	minersProfit, poolProfit := chargeFee(revenue, u.config.PoolFee)
 
 	var rewards map[string]int64
+	var err error
 	if u.config.PPLNS {
-		rewards, err = calculateRewardsForSharesPPLNS(u.SQL, minersProfit)
-		if err != nill {
+		rewards, err = u.calculateRewardsForSharesPPLNS(minersProfit)
+		if err != nil {
 			return nil, nil, nil, nil, err
 		}
 	} else {
@@ -503,7 +504,7 @@ func calculateRewardsForShares(shares map[string]int64, total int64, reward *big
 	return rewards
 }
 
-func calculateRewardsForSharesPPLNS(s *SqlClient, reward *big.Rat) (map[string]int64, error) {
+func (u *BlockUnlocker) calculateRewardsForSharesPPLNS(reward *big.Rat) (map[string]int64, error) {
 	pageStart := 0
 	pageLength := 10
 	//TODO Get from config or default to 2.0
@@ -513,7 +514,7 @@ func calculateRewardsForSharesPPLNS(s *SqlClient, reward *big.Rat) (map[string]i
 	for ok := true; ok; ok = (cumulativeScore.Cmp(targetScore) == -1) {
 		//debug
 		fmt.Println("new loop")
-		shares, err := s.GetAllShares(pageStart, pageLength)
+		shares, err := u.SQL.GetAllShares(pageStart, pageLength)
 		if len(shares) < 1 {
 			fmt.Println("Out of shares... done calculating rewards")
 			break
