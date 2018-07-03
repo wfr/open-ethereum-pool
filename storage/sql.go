@@ -79,7 +79,7 @@ func (s *SqlClient) DeleteAllShares() (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := stmt.Exec(address, nonce, hashNonce, score)
+	res, err := stmt.Exec()
 	if err != nil {
 		return nil, err
 	}
