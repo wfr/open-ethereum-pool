@@ -550,6 +550,12 @@ func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat) (ma
 			if cumulativeScore.Cmp(targetScore) >= 0 {
 				//debug
 				fmt.Println("hit target done processing scores ", cumulativeScore)
+				//purge shares older than the last share found
+				log.Println("Purging old shares...")
+				// _, err := sql.DeleteOldShares(shares[i].ID)
+				// if err != nil {
+				// 	log.Println("Smething went wrong purging old shares")
+				// }
 				break
 			}
 

@@ -18,11 +18,12 @@ type SqlClient struct {
 }
 
 type ShareData struct {
-	ID        string
-	Address   string
-	Nonce     string
-	HashNonce string
-	Score     string
+	ID          string
+	Address     string
+	Nonce       string
+	HashNonce   string
+	Score       string
+	BlockHeight string
 }
 
 func (s *SqlClient) Ping() error {
@@ -38,12 +39,12 @@ func (s *SqlClient) GetAllShares(pageStart, pageLength int) ([]ShareData, error)
 	var err error
 	//TODO: poor way of doing defaults.. redo this
 	if pageStart <= 0 && pageLength <= 0 {
-		rows, err = s.client.Query("select id, address, nonce, hash_nonce, score from shares")
+		rows, err = s.client.Query("select id, address, nonce, hash_nonce, score, block_height from shares")
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		rows, err = s.client.Query("select id, address, nonce, hash_nonce, score from shares order by id desc limit ?,?", pageStart, pageLength)
+		rows, err = s.client.Query("select id, address, nonce, hash_nonce, score, block_height from shares order by id desc limit ?,?", pageStart, pageLength)
 		if err != nil {
 			return nil, err
 		}
@@ -62,24 +63,39 @@ func (s *SqlClient) GetAllShares(pageStart, pageLength int) ([]ShareData, error)
 	return result, nil
 }
 
-func (s *SqlClient) InsertShare(address, nonce, hashNonce, score string) (sql.Result, error) {
-	stmt, err := s.client.Prepare("Insert into shares(address, nonce, hash_nonce, score) VALUES(?,?,?,?)")
+func (s *SqlClient) InsertShare(address, nonce, hashNonce, score, blockHeight string) (sql.Result, error) {
+	stmt, err := s.client.Prepare("Insert into shares(address, nonce, hash_nonce, score, block_height) VALUES(?,?,?,?,?)")
 	if err != nil {
 		return nil, err
 	}
-	res, err := stmt.Exec(address, nonce, hashNonce, score)
+	res, err := stmt.Exec(address, nonce, hashNonce, score, blockHeight)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
+//only call in unit tests... very dangerous
 func (s *SqlClient) DeleteAllShares() (sql.Result, error) {
 	stmt, err := s.client.Prepare("delete from shares")
 	if err != nil {
 		return nil, err
 	}
 	res, err := stmt.Exec()
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// delete all shares older than id.
+// These shares are too old to be included in score calculations and are not needed anymore
+func (s *SqlClient) DeleteOldShares(id int) (sql.Result, error) {
+	stmt, err := s.client.Prepare("delete from shares where id < ?")
+	if err != nil {
+		return nil, err
+	}
+	res, err := stmt.Exec(id)
 	if err != nil {
 		return nil, err
 	}

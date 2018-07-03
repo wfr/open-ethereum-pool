@@ -109,7 +109,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 			} else {
 				log.Printf("Inserted block %v to backend", h.height)
 				//insert pplns share into sql now that the block is valid and submitted
-				_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'f', 20, 64))
+				_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'f', 20, 64), strconv.FormatUint(h.height, 10))
 				if err != nil {
 					log.Println("Failed to insert share into sql:", err)
 				} else {
@@ -120,7 +120,7 @@ func (s *ProxyServer) processShareNH(login, id, ip string, t *BlockTemplate, par
 		}
 	} else {
 		//insert pplns share since no block was found
-		_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'f', 20, 64))
+		_, err := s.SQL.InsertShare(login, params[0], params[1], strconv.FormatFloat(shareScore, 'f', 20, 64), strconv.FormatUint(h.height, 10))
 		if err != nil {
 			log.Println("Failed to insert share into sql:", err)
 		} else {
