@@ -74,6 +74,18 @@ func (s *SqlClient) InsertShare(address, nonce, hashNonce, score string) (sql.Re
 	return res, nil
 }
 
+func (s *SqlClient) DeleteAllShares() (sql.Result, error) {
+	stmt, err := s.client.Prepare("delete from shares")
+	if err != nil {
+		return nil, err
+	}
+	res, err := stmt.Exec(address, nonce, hashNonce, score)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func NewSqlClient(cfg *SqlConfig) (*SqlClient, error) {
 	// debug
 	// log.Printf("Connection string %s", cfg.UserName+":"+cfg.Password+"@tcp("+cfg.Endpoint+")/"+cfg.DataBase)

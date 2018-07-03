@@ -47,6 +47,7 @@ func TestCalculateRewardsPPLNS(t *testing.T) {
 	if totalAmount != expectedTotalAmount {
 		t.Errorf("Total reward must be equal to block reward in Shannon: %v vs %v", expectedTotalAmount, totalAmount)
 	}
+	sql.DeleteAllShares()
 }
 func TestCalculateRewards(t *testing.T) {
 	blockReward, _ := new(big.Rat).SetString("5000000000000000000")
