@@ -12,7 +12,42 @@ import (
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
+func TestCalculateRewards(t *testing.T) {
+	sqlConfig := storage.SqlConfig{Endpoint: "127.0.0.1:3306", UserName: "root", DataBase: "pool", Password: "minemine"}
+	sql, err := storage.NewSqlClient(sqlConfig)
+	if err != nil {
+		t.Errorf("Error connecting to sql server")
+	}
+	//Insert test data
+	sql.InsertShares("0x1", "1", "1", "0.3")
+	sql.InsertShares("0x1", "1", "1", "0.1")
+	sql.InsertShares("0x1", "1", "1", "0.6")
+	sql.InsertShares("0x2", "1", "1", "0.25")
+	sql.InsertShares("0x2", "1", "1", "0.25")
+	sql.InsertShares("0x3", "1", "1", "0.001")
+	sql.InsertShares("0x3", "1", "1", "0.299")
+	sql.InsertShares("0x4", "1", "1", "0.2")
 
+	blockReward, _ := new(big.Rat).SetString("5000000000000000000")
+	expectedTotalAmount := int64(5000000000)
+	expectedRewards := map[string]int64{"0x1": 2500000000, "0x2": 1250000000, "0x3": 750000000, "0x4": 500000000}
+	rewards, err := calculateRewardsForSharesPPLNS(sql, blockReward)
+	if err != nil {
+		t.Errorf("Error completing rewards calculation")
+	}
+
+	totalAmount := int64(0)
+	for login, amount := range rewards {
+		totalAmount += amount
+
+		if expectedRewards[login] != amount {
+			t.Errorf("Amount for %v must be equal to %v vs %v", login, expectedRewards[login], amount)
+		}
+	}
+	if totalAmount != expectedTotalAmount {
+		t.Errorf("Total reward must be equal to block reward in Shannon: %v vs %v", expectedTotalAmount, totalAmount)
+	}
+}
 func TestCalculateRewards(t *testing.T) {
 	blockReward, _ := new(big.Rat).SetString("5000000000000000000")
 	shares := map[string]int64{"0x0": 1000000, "0x1": 20000, "0x2": 5000, "0x3": 10, "0x4": 1}
