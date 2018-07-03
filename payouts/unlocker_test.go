@@ -12,7 +12,7 @@ import (
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
-func TestCalculateRewards(t *testing.T) {
+func TestCalculateRewardsPPLNS(t *testing.T) {
 	sqlConfig := &storage.SqlConfig{Endpoint: "127.0.0.1:3306", UserName: "root", DataBase: "pool", Password: "minemine"}
 	sql, err := storage.NewSqlClient(sqlConfig)
 	if err != nil {
