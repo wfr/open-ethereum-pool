@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/redis.v3"
 
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type Config struct {
@@ -162,15 +162,17 @@ func (r *RedisClient) GetNodeStates() ([]map[string]interface{}, error) {
 func (r *RedisClient) checkPoWExist(height uint64, params []string) (bool, error) {
 	// Sweep PoW backlog for previous blocks, we have 3 templates back in RAM
 	r.client.ZRemRangeByScore(r.formatKey("pow"), "-inf", fmt.Sprint("(", height-8))
-	
+
 	// DEBUG
-	//fmt.Println(strings.Join(params, ":"))
+	fmt.Println("Checking POW backlog... params: ")
+	fmt.Println(strings.Join(params, ":"))
 
 	val, err := r.client.ZAdd(r.formatKey("pow"), redis.Z{Score: float64(height), Member: strings.Join(params, ":")}).Result()
 	return val == 0, err
 }
 
 func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, height uint64, window time.Duration) (bool, error) {
+	fmt.Println("************************************************** Writing regular shareS **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
@@ -193,7 +195,32 @@ func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, 
 	return false, err
 }
 
+func (r *RedisClient) WritePPLNSShare(login, id string, params []string, diff float64, height uint64, window time.Duration) (bool, error) {
+	fmt.Println("************************************************** Writing PPLNS shares **************************************************")
+	exist, err := r.checkPoWExist(height, params)
+	if err != nil {
+		return false, err
+	}
+	// Duplicate share, (nonce, powHash, mixDigest) pair exist
+	if exist {
+		return true, nil
+	}
+	tx := r.client.Multi()
+	defer tx.Close()
+
+	ms := util.MakeTimestamp()
+	ts := ms / 1000
+
+	_, err = tx.Exec(func() error {
+		r.writePPLNSShare(tx, ms, ts, login, id, diff, window, params)
+		//tx.HIncrBy(r.formatKey("stats"), "pplnsShares", diff)
+		return nil
+	})
+	return false, err
+}
+
 func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundDiff int64, height uint64, window time.Duration) (bool, error) {
+	fmt.Println("************************************************** Writing regular Block  **************************************************")
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
@@ -234,8 +261,65 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 	}
 }
 
+func (r *RedisClient) WritePPLNSBlock(login, id string, params []string, shareScore float64, roundDiff int64, height uint64, window time.Duration) (bool, error) {
+	//debug
+	fmt.Println("************************************************** Writing PPLNS block **************************************************")
+	exist, err := r.checkPoWExist(height, params)
+	if err != nil {
+		return false, err
+	}
+	// Duplicate share, (nonce, powHash, mixDigest) pair exist
+	if exist {
+		return true, nil
+	}
+	tx := r.client.Multi()
+	defer tx.Close()
+
+	ms := util.MakeTimestamp()
+	ts := ms / 1000
+
+	cmds, err := tx.Exec(func() error {
+		r.writePPLNSShare(tx, ms, ts, login, id, shareScore, window, params)
+		tx.HSet(r.formatKey("stats"), "lastBlockFound", strconv.FormatInt(ts, 10))
+		tx.HDel(r.formatKey("stats"), "roundShares")
+		tx.ZIncrBy(r.formatKey("finders"), 1, login)
+		tx.HIncrBy(r.formatKey("miners", login), "blocksFound", 1)
+		//Dont need anymore
+		//tx.Rename(r.formatKey("shares", "roundCurrent"), r.formatRound(int64(height), params[0]))
+		tx.HGetAllMap(r.formatRound(int64(height), params[0]))
+		return nil
+	})
+	if err != nil {
+		return false, err
+	} else {
+		sharesMap, _ := cmds[9].(*redis.StringStringMapCmd).Result()
+		totalShares := int64(0)
+		for _, v := range sharesMap {
+			n, _ := strconv.ParseInt(v, 9, 64)
+			totalShares += n
+		}
+		hashHex := strings.Join(params, ":")
+		s := join(hashHex, ts, roundDiff, totalShares)
+		cmd := r.client.ZAdd(r.formatKey("blocks", "candidates"), redis.Z{Score: float64(height), Member: s})
+		return false, cmd.Err()
+	}
+}
+
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
+	//Debug
+	fmt.Println("************************************************** Writing SHARE to backend **************************************************")
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
+	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
+	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
+	tx.Expire(r.formatKey("hashrate", login), expire) // Will delete hashrates for miners that gone
+	tx.HSet(r.formatKey("miners", login), "lastShare", strconv.FormatInt(ts, 10))
+}
+
+func (r *RedisClient) writePPLNSShare(tx *redis.Multi, ms, ts int64, login, id string, diff float64, expire time.Duration, params []string) {
+	//Debug
+	fmt.Println("************************************************** Writing PPLNS shares to backend **************************************************")
+	res := tx.HSet(r.formatKey("shares", "pplns"), login+":"+strings.Join(params, ":"), strconv.FormatFloat(diff, 'g', 1000, 64))
+	fmt.Println(res.Val)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
 	tx.Expire(r.formatKey("hashrate", login), expire) // Will delete hashrates for miners that gone

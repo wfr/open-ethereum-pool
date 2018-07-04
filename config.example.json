@@ -87,6 +87,13 @@
 		"password": ""
 	},
 
+	"sql": {
+		"endpoint": "127.0.0.1:6379",
+		"username": "root",
+		"database": "pool",
+		"password": "minemine"
+	},
+
 	"unlocker": {
 		"enabled": false,
 		"poolFee": 1.0,
@@ -97,7 +104,8 @@
 		"keepTxFees": false,
 		"interval": "10m",
 		"daemon": "http://127.0.0.1:8545",
-		"timeout": "10s"
+		"timeout": "10s",
+		"PPLNS": true
 	},
 
 	"payouts": {

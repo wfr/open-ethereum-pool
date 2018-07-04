@@ -1,6 +1,7 @@
 package payouts
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -10,9 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/math"
 
-	"github.com/sammy007/open-ethereum-pool/rpc"
-	"github.com/sammy007/open-ethereum-pool/storage"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/rpc"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type UnlockerConfig struct {
@@ -26,26 +27,34 @@ type UnlockerConfig struct {
 	Interval       string  `json:"interval"`
 	Daemon         string  `json:"daemon"`
 	Timeout        string  `json:"timeout"`
+	ClassicChain   bool    `json:"classicChain"`
+	PPLNS          bool    `json:"PPLNS"`
 }
 
 const minDepth = 16
+const byzantiumHardForkHeight = 4370000
+const reducedClassicReward = 5000000
 
-var constReward = math.MustParseBig256("5000000000000000000")
-var uncleReward = new(big.Int).Div(constReward, new(big.Int).SetInt64(32))
+var homesteadReward = math.MustParseBig256("5000000000000000000")
+var byzantiumReward = math.MustParseBig256("3000000000000000000")
+var classicReward = math.MustParseBig256("4000000000000000000")
+var classicBaseReward = math.MustParseBig256("5000000000000000000")
+var isClassic bool
 
 // Donate 10% from pool fees to developers
-const donationFee = 10.0
+const donationFee = 0.0
 const donationAccount = "0xb85150eb365e7df0941f0cf08235f987ba91506a"
 
 type BlockUnlocker struct {
 	config   *UnlockerConfig
 	backend  *storage.RedisClient
+	SQL      *storage.SqlClient
 	rpc      *rpc.RPCClient
 	halt     bool
 	lastFail error
 }
 
-func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient) *BlockUnlocker {
+func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient, SQL *storage.SqlClient) *BlockUnlocker {
 	if len(cfg.PoolFeeAddress) != 0 && !util.IsValidHexAddress(cfg.PoolFeeAddress) {
 		log.Fatalln("Invalid poolFeeAddress", cfg.PoolFeeAddress)
 	}
@@ -55,8 +64,9 @@ func NewBlockUnlocker(cfg *UnlockerConfig, backend *storage.RedisClient) *BlockU
 	if cfg.ImmatureDepth < minDepth {
 		log.Fatalf("Immature depth can't be < %v, your depth is %v", minDepth, cfg.ImmatureDepth)
 	}
-	u := &BlockUnlocker{config: cfg, backend: backend}
+	u := &BlockUnlocker{config: cfg, backend: backend, SQL: SQL}
 	u.rpc = rpc.NewRPCClient("BlockUnlocker", cfg.Daemon, cfg.Timeout)
+	isClassic = cfg.ClassicChain
 	return u
 }
 
@@ -110,6 +120,11 @@ func (u *BlockUnlocker) unlockCandidates(candidates []*storage.BlockData) (*Unlo
 		 */
 		for i := int64(minDepth * -1); i < minDepth; i++ {
 			height := candidate.Height + i
+
+			if height < 0 {
+				continue
+			}
+
 			block, err := u.rpc.GetBlockByHeight(height)
 			if err != nil {
 				log.Printf("Error while retrieving block %v from node: %v", height, err)
@@ -198,14 +213,12 @@ func matchCandidate(block *rpc.GetBlockReply, candidate *storage.BlockData) bool
 }
 
 func (u *BlockUnlocker) handleBlock(block *rpc.GetBlockReply, candidate *storage.BlockData) error {
-	// Initial 5 Ether static reward
-	reward := new(big.Int).Set(constReward)
-
 	correctHeight, err := strconv.ParseInt(strings.Replace(block.Number, "0x", "", -1), 16, 64)
 	if err != nil {
 		return err
 	}
 	candidate.Height = correctHeight
+	reward := getConstReward(candidate.Height)
 
 	// Add TX fees
 	extraTxReward, err := u.getExtraRewardForTx(block)
@@ -219,6 +232,7 @@ func (u *BlockUnlocker) handleBlock(block *rpc.GetBlockReply, candidate *storage
 	}
 
 	// Add reward for including uncles
+	uncleReward := getRewardForUncle(candidate.Height)
 	rewardForUncles := big.NewInt(0).Mul(uncleReward, big.NewInt(int64(len(block.Uncles))))
 	reward.Add(reward, rewardForUncles)
 
@@ -443,12 +457,20 @@ func (u *BlockUnlocker) calculateRewards(block *storage.BlockData) (*big.Rat, *b
 	revenue := new(big.Rat).SetInt(block.Reward)
 	minersProfit, poolProfit := chargeFee(revenue, u.config.PoolFee)
 
-	shares, err := u.backend.GetRoundShares(block.RoundHeight, block.Nonce)
-	if err != nil {
-		return nil, nil, nil, nil, err
+	var rewards map[string]int64
+	var err error
+	if u.config.PPLNS {
+		rewards, err = calculateRewardsForSharesPPLNS(u.SQL, minersProfit, block.Height)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	} else {
+		shares, err := u.backend.GetRoundShares(block.RoundHeight, block.Nonce)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		rewards = calculateRewardsForShares(shares, block.TotalShares, minersProfit)
 	}
-
-	rewards := calculateRewardsForShares(shares, block.TotalShares, minersProfit)
 
 	if block.ExtraReward != nil {
 		extraReward := new(big.Rat).SetInt(block.ExtraReward)
@@ -482,6 +504,81 @@ func calculateRewardsForShares(shares map[string]int64, total int64, reward *big
 	return rewards
 }
 
+func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat, blockHeight int64) (map[string]int64, error) {
+	pageStart := 0
+	pageLength := 10000
+	//TODO Get from config or default to 2.0
+	targetScore := big.NewRat(2, 1)
+	cumulativeScore := big.NewRat(0, 1)
+	rewards := make(map[string]*big.Rat)
+	fmt.Println("Looking at shares at and below block height:", blockHeight)
+
+	for ok := true; ok; ok = (cumulativeScore.Cmp(targetScore) == -1) {
+		shares, err := sql.GetAllShares(pageStart, pageLength, blockHeight)
+		if len(shares) < 1 {
+			fmt.Println("Out of shares... done calculating rewards")
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		//loop through page of shares where the height is <= the found blockHeight.. accumulate score for each worker and stop when target is reached
+		for i := 0; i < len(shares); i++ {
+			fmt.Println("Cumulative score before: ", cumulativeScore)
+			ratShareScore := big.NewRat(0, 1)
+			if _, ok := ratShareScore.SetString(shares[i].Score); !ok {
+				return nil, errors.New("Failed to parse share")
+			}
+			if err != nil {
+				return nil, err
+			}
+			//check if adding floatShareScore brings us above score and assign the remaining score to this share then break
+			tmp := big.NewRat(0, 1)
+			if tmp.Add(cumulativeScore, ratShareScore).Cmp(targetScore) == 1 {
+				//debug
+				fmt.Println("Remainder detected... Float sharescore was: ", ratShareScore)
+				fmt.Println("target is ", targetScore)
+				ratShareScore.Sub(targetScore, cumulativeScore)
+				fmt.Println("Remainder detected... Float sharescore is: ", ratShareScore)
+			}
+			if _, ok := rewards[shares[i].Address]; !ok {
+				rewards[shares[i].Address] = big.NewRat(0, 1)
+			}
+			rewards[shares[i].Address].Add(rewards[shares[i].Address], ratShareScore)
+			cumulativeScore.Add(cumulativeScore, ratShareScore)
+			fmt.Println("Cumulative score after: ", cumulativeScore)
+			if cumulativeScore.Cmp(targetScore) >= 0 {
+				//debug
+				fmt.Println("hit target done processing scores ", cumulativeScore)
+				//purge shares older than the last share found
+				log.Println("Purging old shares...")
+				shareIdInt, _ := strconv.Atoi(shares[i].ID)
+				_, err := sql.DeleteOldShares(shareIdInt)
+				if err != nil {
+					log.Println("Smething went wrong purging old shares")
+				}
+				break
+			}
+
+		}
+		pageStart += pageLength
+	}
+	for key, value := range rewards {
+		fmt.Println("Key:", key, "Value:", value)
+	}
+	finalReward := make(map[string]int64)
+	for login, shareScore := range rewards {
+		percent := new(big.Rat).Quo(shareScore, targetScore)
+		workerReward := new(big.Rat).Mul(reward, percent)
+		//debug
+		fmt.Println("Reward for ", login)
+		fmt.Println(workerReward)
+		finalReward[login] = weiToShannonInt64(workerReward)
+	}
+
+	return finalReward, nil
+}
+
 // Returns new value after fee deduction and fee value.
 func chargeFee(value *big.Rat, fee float64) (*big.Rat, *big.Rat) {
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
@@ -496,9 +593,35 @@ func weiToShannonInt64(wei *big.Rat) int64 {
 	return value
 }
 
+func getConstReward(height int64) *big.Int {
+	if isClassic {
+		if height >= reducedClassicReward {
+			return new(big.Int).Set(classicReward)
+		}
+		return new(big.Int).Set(classicBaseReward)
+	}
+	if height >= byzantiumHardForkHeight {
+		return new(big.Int).Set(byzantiumReward)
+	}
+	return new(big.Int).Set(homesteadReward)
+}
+
+func getRewardForUncle(height int64) *big.Int {
+	reward := getConstReward(height)
+	log.Printf("Uncle reward amount from getRewardForUncle %s", new(big.Int).Div(reward, new(big.Int).SetInt64(32)))
+	return new(big.Int).Div(reward, new(big.Int).SetInt64(32))
+}
+
 func getUncleReward(uHeight, height int64) *big.Int {
-	reward := new(big.Int).Set(constReward)
-	reward.Mul(big.NewInt(uHeight+8-height), reward)
+	reward := getConstReward(height)
+	if isClassic {
+		reward.Mul(reward, big.NewInt(3125))
+		reward.Div(reward, big.NewInt(100000))
+		log.Printf("Uheight: %d, height %d, Uncle reward amount from getUncleReward %s", uHeight, height, reward)
+		return reward
+	}
+	k := height - uHeight
+	reward.Mul(big.NewInt(8-k), reward)
 	reward.Div(reward, big.NewInt(8))
 	return reward
 }

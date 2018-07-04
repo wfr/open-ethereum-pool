@@ -1,3 +1,5 @@
+// +build go1.9
+
 package main
 
 import (
@@ -11,17 +13,18 @@ import (
 
 	"github.com/yvasiyarov/gorelic"
 
-	"github.com/sammy007/open-ethereum-pool/api"
-	"github.com/sammy007/open-ethereum-pool/payouts"
-	"github.com/sammy007/open-ethereum-pool/proxy"
-	"github.com/sammy007/open-ethereum-pool/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/api"
+	"github.com/blockmaintain/open-ethereum-pool-nh/payouts"
+	"github.com/blockmaintain/open-ethereum-pool-nh/proxy"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
 )
 
 var cfg proxy.Config
 var backend *storage.RedisClient
+var sql *storage.SqlClient
 
 func startProxy() {
-	s := proxy.NewProxy(&cfg, backend)
+	s := proxy.NewProxy(&cfg, backend, sql)
 	s.Start()
 }
 
@@ -31,12 +34,12 @@ func startApi() {
 }
 
 func startBlockUnlocker() {
-	u := payouts.NewBlockUnlocker(&cfg.BlockUnlocker, backend)
+	u := payouts.NewBlockUnlocker(&cfg.BlockUnlocker, backend, sql)
 	u.Start()
 }
 
 func startPayoutsProcessor() {
-	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend)
+	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend, sql)
 	u.Start()
 }
 
@@ -79,6 +82,19 @@ func main() {
 	}
 
 	startNewrelic()
+
+	var err error
+	sql, err = storage.NewSqlClient(&cfg.SQL)
+	if err != nil {
+		log.Printf("Cant establish connection to sql:")
+		log.Println(err)
+	}
+	if err := sql.Ping(); err != nil {
+		log.Printf("Cant establish connection to sql:")
+		log.Println(err)
+	} else {
+		log.Printf("Connection to sql established")
+	}
 
 	backend = storage.NewRedisClient(&cfg.Redis, cfg.Coin)
 	pong, err := backend.Check()

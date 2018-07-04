@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sammy007/open-ethereum-pool/storage"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/blockmaintain/open-ethereum-pool-nh/storage"
+	"github.com/blockmaintain/open-ethereum-pool-nh/util"
 )
 
 type Config struct {
@@ -62,15 +62,17 @@ type PolicyServer struct {
 	blacklist  []string
 	whitelist  []string
 	storage    *storage.RedisClient
+	sql        *storage.SqlClient
 }
 
-func Start(cfg *Config, storage *storage.RedisClient) *PolicyServer {
+func Start(cfg *Config, storage *storage.RedisClient, sql *storage.SqlClient) *PolicyServer {
 	s := &PolicyServer{config: cfg, startedAt: util.MakeTimestamp()}
 	grace := util.MustParseDuration(cfg.Limits.Grace)
 	s.grace = int64(grace / time.Millisecond)
 	s.banChannel = make(chan string, 64)
 	s.stats = make(map[string]*Stats)
 	s.storage = storage
+	s.sql = sql
 	s.refreshState()
 
 	timeout := util.MustParseDuration(s.config.ResetInterval)
