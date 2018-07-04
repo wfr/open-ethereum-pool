@@ -552,7 +552,8 @@ func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat, blo
 				fmt.Println("hit target done processing scores ", cumulativeScore)
 				//purge shares older than the last share found
 				log.Println("Purging old shares...")
-				_, err := sql.DeleteOldShares(shares[i].ID)
+				shareIdInt, _ := strconv.Atoi(shares[i].ID)
+				_, err := sql.DeleteOldShares(shareIdInt)
 				if err != nil {
 					log.Println("Smething went wrong purging old shares")
 				}
