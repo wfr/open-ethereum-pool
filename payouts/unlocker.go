@@ -460,7 +460,7 @@ func (u *BlockUnlocker) calculateRewards(block *storage.BlockData) (*big.Rat, *b
 	var rewards map[string]int64
 	var err error
 	if u.config.PPLNS {
-		rewards, err = calculateRewardsForSharesPPLNS(u.SQL, minersProfit)
+		rewards, err = calculateRewardsForSharesPPLNS(u.SQL, minersProfit, block.Height)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
@@ -504,7 +504,7 @@ func calculateRewardsForShares(shares map[string]int64, total int64, reward *big
 	return rewards
 }
 
-func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat) (map[string]int64, error) {
+func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat, blockHeight int64) (map[string]int64, error) {
 	pageStart := 0
 	pageLength := 10
 	//TODO Get from config or default to 2.0
@@ -514,7 +514,7 @@ func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat) (ma
 	for ok := true; ok; ok = (cumulativeScore.Cmp(targetScore) == -1) {
 		//debug
 		fmt.Println("new loop")
-		shares, err := sql.GetAllShares(pageStart, pageLength)
+		shares, err := sql.GetAllShares(pageStart, pageLength, blockHeight)
 		if len(shares) < 1 {
 			fmt.Println("Out of shares... done calculating rewards")
 			break
@@ -522,7 +522,7 @@ func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat) (ma
 		if err != nil {
 			return nil, err
 		}
-		//loop through page of shares.. accumulate score for each worker and stop when target is reached
+		//loop through page of shares where the height is <= the found blockHeight.. accumulate score for each worker and stop when target is reached
 		for i := 0; i < len(shares); i++ {
 			fmt.Println("Cumulative score before: ", cumulativeScore)
 			ratShareScore := big.NewRat(0, 1)

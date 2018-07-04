@@ -19,14 +19,14 @@ func TestCalculateRewardsPPLNS(t *testing.T) {
 		t.Errorf("Error connecting to sql server")
 	}
 	//Insert test data
-	sql.InsertShare("0x1", "1", "1", "0.3")
-	sql.InsertShare("0x1", "1", "1", "0.1")
-	sql.InsertShare("0x1", "1", "1", "0.6")
-	sql.InsertShare("0x2", "1", "1", "0.25")
-	sql.InsertShare("0x2", "1", "1", "0.25")
-	sql.InsertShare("0x3", "1", "1", "0.001")
-	sql.InsertShare("0x3", "1", "1", "0.299")
-	sql.InsertShare("0x4", "1", "1", "0.2")
+	sql.InsertShare("0x1", "1", "1", "0.3", "100")
+	sql.InsertShare("0x1", "1", "1", "0.1", "100")
+	sql.InsertShare("0x1", "1", "1", "0.6", "100")
+	sql.InsertShare("0x2", "1", "1", "0.25", "100")
+	sql.InsertShare("0x2", "1", "1", "0.25", "100")
+	sql.InsertShare("0x3", "1", "1", "0.001", "100")
+	sql.InsertShare("0x3", "1", "1", "0.299", "100")
+	sql.InsertShare("0x4", "1", "1", "0.2", "100")
 
 	blockReward, _ := new(big.Rat).SetString("5000000000000000000")
 	expectedTotalAmount := int64(5000000000)
