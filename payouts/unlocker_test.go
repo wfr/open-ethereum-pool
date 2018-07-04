@@ -1,7 +1,6 @@
 package payouts
 
 import (
-	"fmt"
 	"math/big"
 	"os"
 	"testing"
@@ -33,11 +32,6 @@ func TestCalculateRewardsPPLNS(t *testing.T) {
 	expectedTotalAmount := int64(5000000000)
 	expectedRewards := map[string]int64{"0x1": 2500000000, "0x2": 1250000000, "0x3": 750000000, "0x4": 500000000}
 	rewards, err := calculateRewardsForSharesPPLNS(sql, blockReward, 100)
-
-	//rewards
-	for key, value := range rewards {
-		fmt.Println("Key:", key, "Value:", value)
-	}
 
 	if err != nil {
 		t.Errorf("Error completing rewards calculation")
