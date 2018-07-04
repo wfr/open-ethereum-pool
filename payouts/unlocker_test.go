@@ -31,7 +31,7 @@ func TestCalculateRewardsPPLNS(t *testing.T) {
 	blockReward, _ := new(big.Rat).SetString("5000000000000000000")
 	expectedTotalAmount := int64(5000000000)
 	expectedRewards := map[string]int64{"0x1": 2500000000, "0x2": 1250000000, "0x3": 750000000, "0x4": 500000000}
-	rewards, err := calculateRewardsForSharesPPLNS(sql, blockReward)
+	rewards, err := calculateRewardsForSharesPPLNS(sql, blockReward, 100)
 	if err != nil {
 		t.Errorf("Error completing rewards calculation")
 	}
