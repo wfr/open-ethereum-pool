@@ -511,9 +511,9 @@ func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat, blo
 	targetScore := big.NewRat(2, 1)
 	cumulativeScore := big.NewRat(0, 1)
 	rewards := make(map[string]*big.Rat)
+	fmt.Println("Looking at shares at and below block height:", blockHeight)
+
 	for ok := true; ok; ok = (cumulativeScore.Cmp(targetScore) == -1) {
-		//debug
-		fmt.Println("new loop")
 		shares, err := sql.GetAllShares(pageStart, pageLength, blockHeight)
 		if len(shares) < 1 {
 			fmt.Println("Out of shares... done calculating rewards")
@@ -552,10 +552,10 @@ func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat, blo
 				fmt.Println("hit target done processing scores ", cumulativeScore)
 				//purge shares older than the last share found
 				log.Println("Purging old shares...")
-				// _, err := sql.DeleteOldShares(shares[i].ID)
-				// if err != nil {
-				// 	log.Println("Smething went wrong purging old shares")
-				// }
+				_, err := sql.DeleteOldShares(shares[i].ID)
+				if err != nil {
+					log.Println("Smething went wrong purging old shares")
+				}
 				break
 			}
 
