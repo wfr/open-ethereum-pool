@@ -506,7 +506,7 @@ func calculateRewardsForShares(shares map[string]int64, total int64, reward *big
 
 func calculateRewardsForSharesPPLNS(sql *storage.SqlClient, reward *big.Rat, blockHeight int64) (map[string]int64, error) {
 	pageStart := 0
-	pageLength := 10
+	pageLength := 10000
 	//TODO Get from config or default to 2.0
 	targetScore := big.NewRat(2, 1)
 	cumulativeScore := big.NewRat(0, 1)
