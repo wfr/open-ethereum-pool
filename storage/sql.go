@@ -53,7 +53,7 @@ func (s *SqlClient) GetAllShares(pageStart, pageLength int, blockHeight int64) (
 	var result []ShareData
 	for rows.Next() {
 		var s ShareData
-		err := rows.Scan(&s.ID, &s.Address, &s.Nonce, &s.HashNonce, &s.Score)
+		err := rows.Scan(&s.ID, &s.Address, &s.Nonce, &s.HashNonce, &s.Score, &s.BlockHeight)
 		if err != nil {
 			return nil, err
 		}
